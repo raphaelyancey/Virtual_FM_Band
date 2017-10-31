@@ -44,41 +44,47 @@ for path in FILENAMES:
             CHANNEL_STEP = MAX_FREQ / (len(FILENAMES) - 1)
             freq = CHANNELS[-1][1] + CHANNEL_STEP
 
-        ##
-        ## @brief      Computes the volume of a channel given a vfreq and the channel vfreq
-        ##
-        ## @param      vfreq      The vfreq
-        ## @param      chn_vfreq  The chn vfreq
-        ##
-        ## @return     The volume for vfreq.
-        ##
-        def get_volume_for_vfreq(vfreq, chn_vfreq=None):
-
-            print(" Channel vfreq: {}".format(chn_vfreq))
-
-            lower_vfreq = (chn_vfreq - CHANNEL_STEP) if (chn_vfreq - CHANNEL_STEP) > MIN_FREQ else MIN_FREQ # aka previous channel vfreq
-            upper_vfreq = (chn_vfreq + CHANNEL_STEP) if (chn_vfreq + CHANNEL_STEP) < MAX_FREQ else MAX_FREQ # aka next channel vfreq
-
-            print(" Lower vfreq: {}".format(lower_vfreq))
-            print(" Upper vfreq: {}".format(upper_vfreq))
-
-            if vfreq < lower_vfreq or vfreq > upper_vfreq:
-                # Outside boundaries = null volume
-                print(" {} is outside boundaries.".format(vfreq))
-                return 0
-            else:
-                # Inside boundaries, compute with vol = -abs(x) + 100
-                if lower_vfreq is chn_vfreq: scale = [0, 50]
-                elif upper_vfreq is chn_vfreq: scale = [-50, 0]
-                else: scale = [-50, 50]
-                interpolated_vfreq = interp(vfreq, [lower_vfreq, upper_vfreq], scale)
-                print(" Interpolated vfreq {} from [{}, {}] to {}: {}".format(vfreq, lower_vfreq, upper_vfreq, scale, interpolated_vfreq))
-                volume = -abs(interpolated_vfreq) + 100
-                return volume
-                # TODO: call this function for each channel
-
-        CHANNELS.append((chn, freq, get_volume_for_vfreq))
+        CHANNELS.append((chn, freq))
         print("Assigned to virtual frequency " + str(freq))
+
+##
+## @brief      Computes the volume of a channel given a vfreq and the channel vfreq
+##
+## @param      vfreq      The vfreq
+## @param      chn_vfreq  The channel vfreq
+##
+## @return     The volume for vfreq.
+##
+def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
+
+    print(" Channel vfreq: {}".format(chn_vfreq))
+    
+    lower_chn, upper_chn = get_channels_boundaries(vfreq)
+    lower_chn_vfreq = lower_chn[1]
+    upper_chn_vfreq = upper_chn[1]
+
+    print(" Lower vfreq: {}".format(lower_chn_vfreq))
+    print(" Upper vfreq: {}".format(upper_chn_vfreq))
+
+    if chn_vfreq < lower_chn_vfreq or chn_vfreq > upper_chn_vfreq:
+        # The channel vfreq is outside the boundaries = null volume
+        print(" {} is outside boundaries.".format(chn_vfreq))
+        return 0
+    else:
+        # Inside boundaries, compute with `vol = 100 - abs(x)` with x between -100 and 100
+        # When x = -100, y = 0
+        # When x = 0, y = 100
+        # When x = 100, y = 0
+        # |/|\| (poor ASCII art)
+        #   0
+        if lower_chn_vfreq == chn_vfreq: scale = [0, 100]
+        elif upper_chn_vfreq == chn_vfreq: scale = [-100, 0]
+        else: scale = [-100, 100]
+        interpolated_vfreq = interp(vfreq, [lower_chn_vfreq, upper_chn_vfreq], scale)
+        print(" Interpolated vfreq {} from [{}, {}] to {}: {}".format(vfreq, lower_chn_vfreq, upper_chn_vfreq, scale, interpolated_vfreq))
+        volume = 100 - abs(interpolated_vfreq)
+        return volume
+        # TODO: call this function for each channel
 
 
 ##
@@ -89,24 +95,28 @@ for path in FILENAMES:
 ## @return     A list of volumes to apply to each channel.
 ##
 def get_volumes_for_vfreq(vfreq, channels_list=CHANNELS, MIN_FREQ=MIN_FREQ, MAX_FREQ=MAX_FREQ):
-    print("-- Volumes for vfreq {}".format(vfreq))
-    for i, (channel, chn_vfreq, get_volume_for_vfreq) in enumerate(channels_list):
-        vol = get_volume_for_vfreq(vfreq, chn_vfreq=chn_vfreq)
-        print("> Volume for channel {} ({}) : {}".format(i, chn_vfreq, vol))
+    print("-- Volumes for vfreq {}\n".format(vfreq))
+    for i, (channel, chn_vfreq) in enumerate(channels_list):
+        vol = get_chn_volume_for_vfreq(vfreq, chn_vfreq=chn_vfreq)
+        print("> Volume for channel {} (vfreq {}) : {}\n".format(i, chn_vfreq, vol))
     print("\n")
 
 
 
 ##
-## @brief      Gets the stations boundaries for a given vfreq.
+## @brief      Gets the channels boundaries (the channels around the vfreq) for a given vfreq.
 ##
-## @param      vfreq  The virtual frequency from which to get the surrounding stations
+## @param      vfreq  The virtual frequency from which to get the surrounding channels
 ##
 ## @return     Two (channel, freq) in between which the vfreq is.
 ##
-def get_stations_boundaries(vfreq, channels_list=CHANNELS):
+def get_channels_boundaries(vfreq, channels_list=CHANNELS):
+
+    # By default, the boundaries are [first channels] > vfreq > [last station]
     lower_chn = channels_list[0]
     upper_chn = channels_list[-1]
+
+    # Then for each channel we update them by comparing their vfreq to the requested vfreq
     for i, (channel, chn_vfreq) in enumerate(channels_list):
         if i < len(channels_list) - 1:
             next_channel, next_chn_vfreq = channels_list[i + 1]
@@ -135,9 +145,10 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
 
 
 get_volumes_for_vfreq(0)
-get_volumes_for_vfreq(25)
-get_volumes_for_vfreq(50)
-get_volumes_for_vfreq(75)
+get_volumes_for_vfreq(0+3.5)
+get_volumes_for_vfreq(25+6.5)
+get_volumes_for_vfreq(50+2.5)
+get_volumes_for_vfreq(75+10.5)
 get_volumes_for_vfreq(100)
 
 # while True:
