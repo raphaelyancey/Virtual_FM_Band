@@ -1,5 +1,6 @@
 import swmixer
 import os.path
+import rotaryencoder
 from numpy import interp
 
 try:
@@ -25,6 +26,15 @@ FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
 
 CHANNELS = []
 CHANNEL_STEP = None
+
+def foo():
+    print("increment")
+
+def bar():
+    print("decrement")
+
+rotaryencoder.def_inc_callback(foo)
+rotaryencoder.def_dec_callback(bar)
 
 # Initialization
 for path in FILENAMES:
