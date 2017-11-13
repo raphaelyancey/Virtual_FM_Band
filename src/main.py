@@ -1,14 +1,18 @@
+import sys
 import swmixer
 import os.path
-import rotaryencoder
+try:
+    from rotaryencoder import rotaryencoder
+except:
+    pass
 from numpy import interp
 
 try:
     swmixer.init(stereo=True)
     swmixer.start()
     print("Started swmixer")
-except BaseException:
-    print("Couldn't start swmixer")
+except BaseException as e:
+    print("Couldn't start swmixer: " + str(e.message))
 
 
 RESSOURCES_PATH = "../ressources/audio"
@@ -27,23 +31,26 @@ FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
 CHANNELS = []
 CHANNEL_STEP = None
 
-def foo():
-    print("increment")
+def foo(**params):
+    sys.stdout.write("\r"+str(params['count']))
+    sys.stdout.flush()
 
-def bar():
-    print("decrement")
+def bar(**params):
+    sys.stdout.write("\r"+str(params['count']))
+    sys.stdout.flush()
 
-rotaryencoder.def_inc_callback(foo)
-rotaryencoder.def_dec_callback(bar)
+if 'rotaryencoder' in sys.modules:
+    rotaryencoder.def_inc_callback(foo)
+    rotaryencoder.def_dec_callback(bar)
 
 # Initialization
 for path in FILENAMES:
     try:
-        chn = swmixer.Sound(path)
+        chn = swmixer.StreamingSound(path)
         print("Loaded " + path)
-    except BaseException:
+    except Exception as e:
         chn = None
-        print("Couldn't load " + path)
+        print("Couldn't load " + path + ": " + str(e.message))
     if chn is not None:
         freq = None
         if len(CHANNELS) < 1:
@@ -154,12 +161,16 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
         print("Set volume for freq " + str(vfreq) + " to " + volumes_list[i])
 
 
-get_volumes_for_vfreq(0)
-get_volumes_for_vfreq(0+3.5)
-get_volumes_for_vfreq(25+6.5)
-get_volumes_for_vfreq(50+2.5)
-get_volumes_for_vfreq(75+10.5)
-get_volumes_for_vfreq(100)
+# get_volumes_for_vfreq(0)
+# get_volumes_for_vfreq(0+3.5)
+# get_volumes_for_vfreq(25+6.5)
+# get_volumes_for_vfreq(50+2.5)
+# get_volumes_for_vfreq(75+10.5)
+# get_volumes_for_vfreq(100)
+
+if 'rotaryencoder' in sys.modules:
+    print('yup')
+    rotaryencoder.loop()
 
 # while True:
 #     pass

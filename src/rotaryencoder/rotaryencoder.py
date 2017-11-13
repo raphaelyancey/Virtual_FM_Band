@@ -15,7 +15,7 @@ inc_callback = None
 dec_callback = None
 chg_callback = None
 
-def init_counter(i)
+def init_counter(i):
     global counter
     counter = i
 
@@ -31,21 +31,27 @@ def def_chg_callback(callback):
     global chg_callback
     chg_callback = callback
 
-try:
+def loop():
+    global clkLastState
+    global counter
+    try:
         while True:
-                clkState = GPIO.input(clk)
-                dtState = GPIO.input(dt)
-                if clkState != clkLastState:
-                        if dtState != clkState:
-                                counter += 1
-                                inc_callback(counter) if inc_callback is not None
-                                chg_callback(counter) if chg_callback is not None
-                        else:
-                                counter -= 1
-                                dec_callback(counter) if dec_callback is not None
-                                chg_callback(counter) if chg_callback is not None
-                        print(counter)
-                clkLastState = clkState
-                sleep(0.01)
-finally:
-        GPIO.cleanup()
+            clkState = GPIO.input(clk)
+            dtState = GPIO.input(dt)
+            if clkState != clkLastState:
+                if dtState != clkState:
+                    counter += 1
+                    if inc_callback is not None:
+                        inc_callback(count=counter)
+                    if chg_callback is not None:
+                        chg_callback(count=counter)
+                else:
+                    counter -= 1
+                    if dec_callback is not None:
+                        dec_callback(count=counter)
+                    if chg_callback is not None:
+                        chg_callback(count=counter)
+            clkLastState = clkState
+            sleep(0.001)
+    finally:
+            GPIO.cleanup()

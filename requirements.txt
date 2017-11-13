@@ -2,3 +2,6 @@ pymad
 numpy
 pyaudio
 numpy
+
+# If you run it on a Raspberry Pi, uncomment the line below
+# RPi.GPIO
