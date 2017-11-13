@@ -2,3 +2,4 @@ pymad
 numpy
 pyaudio
 numpy
+swmixer
