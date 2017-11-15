@@ -62,18 +62,18 @@ for path in FILENAMES:
 ##
 def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
 
-    print(" Channel vfreq: {}".format(chn_vfreq))
+    #print(" Channel vfreq: {}".format(chn_vfreq))
     
     lower_chn, upper_chn = get_channels_boundaries(vfreq)
     lower_chn_vfreq = lower_chn[1]
     upper_chn_vfreq = upper_chn[1]
 
-    print(" Lower vfreq: {}".format(lower_chn_vfreq))
-    print(" Upper vfreq: {}".format(upper_chn_vfreq))
+    # print(" Lower vfreq: {}".format(lower_chn_vfreq))
+    # print(" Upper vfreq: {}".format(upper_chn_vfreq))
 
     if chn_vfreq < lower_chn_vfreq or chn_vfreq > upper_chn_vfreq:
         # The channel vfreq is outside the boundaries = null volume
-        print(" {} is outside boundaries.".format(chn_vfreq))
+        #print(" {} is outside boundaries.".format(chn_vfreq))
         return 0
     else:
         # Inside boundaries, compute with `vol = 100 - abs(x)` with x between -100 and 100
@@ -86,7 +86,7 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
         elif upper_chn_vfreq == chn_vfreq: scale = [-100, 0]
         else: scale = [-100, 100]
         interpolated_vfreq = interp(vfreq, [lower_chn_vfreq, upper_chn_vfreq], scale)
-        print(" Interpolated vfreq {} from [{}, {}] to {}: {}".format(vfreq, lower_chn_vfreq, upper_chn_vfreq, scale, interpolated_vfreq))
+        #print(" Interpolated vfreq {} from [{}, {}] to {}: {}".format(vfreq, lower_chn_vfreq, upper_chn_vfreq, scale, interpolated_vfreq))
         volume = 100 - abs(interpolated_vfreq)
         return volume
         # TODO: call this function for each channel
@@ -100,11 +100,14 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
 ## @return     A list of volumes to apply to each channel.
 ##
 def get_volumes_for_vfreq(vfreq, channels_list=CHANNELS, MIN_VFREQ=MIN_VFREQ, MAX_VFREQ=MAX_VFREQ):
-    print("-- Volumes for vfreq {}\n".format(vfreq))
+    #print("-- Volumes for vfreq {}\n".format(vfreq))
+    volumes = []
     for i, (channel, chn_vfreq) in enumerate(channels_list):
         vol = get_chn_volume_for_vfreq(vfreq, chn_vfreq=chn_vfreq)
-        print("> Volume for channel {} (vfreq {}) : {}\n".format(i, chn_vfreq, vol))
-    print("\n")
+        volumes.append(vol)
+        # print("> Volume for channel {} (vfreq {}) : {}\n".format(i, chn_vfreq, vol))
+    return volumes
+    # print("\n")
 
 
 
@@ -150,7 +153,10 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
 
 
 def vfreq_changed(vfreq):
-    sys.stdout.write("\r" + str(vfreq))
+    volumes = get_volumes_for_vfreq(vfreq)
+    sys.stdout.write("\r")
+    for i, volume in enumerate(volumes):
+        sys.stdout.write(str(round(volume, 2)) + " - ")
     sys.stdout.flush()
 
 if 'rotaryencoder' in sys.modules:
