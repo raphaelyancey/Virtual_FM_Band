@@ -16,8 +16,8 @@ except BaseException as e:
 
 
 RESSOURCES_PATH = "../ressources/audio"
-MIN_FREQ=0
-MAX_FREQ=100
+MIN_VFREQ=88
+MAX_VFREQ=108
 
 # TODO: scan the audio directory intead of hardcoding the filenames
 FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
@@ -31,18 +31,6 @@ FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
 CHANNELS = []
 CHANNEL_STEP = None
 
-def foo(**params):
-    sys.stdout.write("\r"+str(params['count']))
-    sys.stdout.flush()
-
-def bar(**params):
-    sys.stdout.write("\r"+str(params['count']))
-    sys.stdout.flush()
-
-if 'rotaryencoder' in sys.modules:
-    rotaryencoder.def_inc_callback(foo)
-    rotaryencoder.def_dec_callback(bar)
-
 # Initialization
 for path in FILENAMES:
     try:
@@ -54,11 +42,11 @@ for path in FILENAMES:
     if chn is not None:
         freq = None
         if len(CHANNELS) < 1:
-            freq = MIN_FREQ
+            freq = MIN_VFREQ
         elif len(CHANNELS) == (len(FILENAMES) - 1):
-            freq = MAX_FREQ
+            freq = MAX_VFREQ
         else:
-            CHANNEL_STEP = MAX_FREQ / (len(FILENAMES) - 1)
+            CHANNEL_STEP = MAX_VFREQ / (len(FILENAMES) - 1)
             freq = CHANNELS[-1][1] + CHANNEL_STEP
 
         CHANNELS.append((chn, freq))
@@ -111,7 +99,7 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
 ##
 ## @return     A list of volumes to apply to each channel.
 ##
-def get_volumes_for_vfreq(vfreq, channels_list=CHANNELS, MIN_FREQ=MIN_FREQ, MAX_FREQ=MAX_FREQ):
+def get_volumes_for_vfreq(vfreq, channels_list=CHANNELS, MIN_VFREQ=MIN_VFREQ, MAX_VFREQ=MAX_VFREQ):
     print("-- Volumes for vfreq {}\n".format(vfreq))
     for i, (channel, chn_vfreq) in enumerate(channels_list):
         vol = get_chn_volume_for_vfreq(vfreq, chn_vfreq=chn_vfreq)
@@ -161,6 +149,14 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
         print("Set volume for freq " + str(vfreq) + " to " + volumes_list[i])
 
 
+def vfreq_changed(vfreq):
+    sys.stdout.write("\r" + str(vfreq))
+    sys.stdout.flush()
+
+if 'rotaryencoder' in sys.modules:
+    rotaryencoder.init(MIN_VFREQ, MAX_VFREQ, step=0.1)
+    rotaryencoder.def_chg_callback(vfreq_changed)
+
 # get_volumes_for_vfreq(0)
 # get_volumes_for_vfreq(0+3.5)
 # get_volumes_for_vfreq(25+6.5)
@@ -169,8 +165,10 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
 # get_volumes_for_vfreq(100)
 
 if 'rotaryencoder' in sys.modules:
-    print('yup')
     rotaryencoder.loop()
+
+# chn, _ = CHANNELS[1]
+# chn.play()
 
 # while True:
 #     pass
