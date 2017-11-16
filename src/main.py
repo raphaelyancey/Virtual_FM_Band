@@ -1,6 +1,7 @@
 import sys
 import swmixer
 import os.path
+from time import sleep
 try:
     from rotaryencoder import rotaryencoder
 except:
@@ -8,7 +9,7 @@ except:
 from numpy import interp
 
 try:
-    swmixer.init(stereo=True)
+    swmixer.init(stereo=True, chunksize=1024)
     swmixer.start()
     print("Started swmixer")
 except BaseException as e:
@@ -21,7 +22,7 @@ MAX_VFREQ=108
 
 # TODO: scan the audio directory intead of hardcoding the filenames
 FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
-    "1.mp3",
+    "1.wav",
     "2.mp3",
     "3.mp3",
     "4.mp3",
@@ -157,7 +158,10 @@ if 'rotaryencoder' in sys.modules:
     rotaryencoder.def_chg_callback(vfreq_changed)
 
 if 'rotaryencoder' in sys.modules:
-    rotaryencoder.loop()
+    #rotaryencoder.loop()
+    pass
 
-# chn, _ = CHANNELS[1]
-# chn.play()
+chn, _ = CHANNELS[0]
+chn.play()
+
+sleep(50)
