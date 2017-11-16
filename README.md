@@ -17,7 +17,7 @@ Technically, it's a mixer with multiple tracks that takes care of the volume of 
 ## Installation
 
 In the project root:
-* `brew install portaudio mad` (OSX) or `apt-get install libmad0-dev portaudio19-dev libasound-dev` (Debian)
+* `brew install portaudio mad` (OSX) or `apt-get install libportaudio0 libportaudio2 libportaudiocpp0 libmad0-dev portaudio19-dev libasound-dev` (Debian)
 * `pip install virtualenv` (if not already installed on your machine)
 * `virtualenv --python=python2.7` (or whatever Python 2 binary you've got)
 * `source bin/activate`
