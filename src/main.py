@@ -1,14 +1,12 @@
 import sys
+import time
 import swmixer
 import os.path
-try:
-    from rotaryencoder import rotaryencoder
-except:
-    pass
+from rotaryencoder import rotaryencoder
 from numpy import interp
 
 try:
-    swmixer.init(stereo=True)
+    swmixer.init(stereo=True, samplerate=32000)
     swmixer.start()
     print("Started swmixer")
 except BaseException as e:
@@ -23,9 +21,9 @@ MAX_VFREQ=108
 FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
     "1.mp3",
     "2.mp3",
-    "3.mp3",
-    "4.mp3",
-    "5.mp3"
+    "3.mp3"
+    # "4.mp3",
+    # "5.mp3"
 ])
 
 CHANNELS = []
@@ -34,12 +32,12 @@ CHANNEL_STEP = None
 # Initialization
 for path in FILENAMES:
     try:
-        chn = swmixer.StreamingSound(path)
+        snd = swmixer.StreamingSound(path)
         print("Loaded " + path)
     except Exception as e:
-        chn = None
+        snd = None
         print("Couldn't load " + path + ": " + str(e.message))
-    if chn is not None:
+    if snd is not None:
         freq = None
         if len(CHANNELS) < 1:
             freq = MIN_VFREQ
@@ -50,8 +48,10 @@ for path in FILENAMES:
             print("Channel step: {}".format(CHANNEL_STEP))
             # Last channel vfreq + step
             freq = CHANNELS[-1][1] + CHANNEL_STEP
+        chn = snd.play(volume=1.0)
+        #chn.pause()
 
-        CHANNELS.append((chn, freq))
+        CHANNELS.append((chn, freq, snd))
         print("Assigned to virtual frequency " + str(freq))
 
 ##
@@ -81,7 +81,7 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
         else: scale = [-100, 100]
         interpolated_vfreq = interp(vfreq, [lower_chn_vfreq, upper_chn_vfreq], scale)
         volume = 100 - abs(interpolated_vfreq)
-        return volume
+        return volume/100
 
 ##
 ## @brief      Computes the channel volumes for a given virtual frequency.
@@ -92,7 +92,7 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
 ##
 def get_volumes_for_vfreq(vfreq, channels_list=CHANNELS, MIN_VFREQ=MIN_VFREQ, MAX_VFREQ=MAX_VFREQ):
     volumes = []
-    for i, (channel, chn_vfreq) in enumerate(channels_list):
+    for i, (_, chn_vfreq, _) in enumerate(channels_list):
         vol = get_chn_volume_for_vfreq(vfreq, chn_vfreq=chn_vfreq)
         volumes.append(vol)
     return volumes
@@ -113,9 +113,9 @@ def get_channels_boundaries(vfreq, channels_list=CHANNELS):
     upper_chn = channels_list[-1]
 
     # Then for each channel we update them by comparing their vfreq to the requested vfreq
-    for i, (channel, chn_vfreq) in enumerate(channels_list):
+    for i, (_, chn_vfreq, _) in enumerate(channels_list):
         if i < len(channels_list) - 1:
-            next_channel, next_chn_vfreq = channels_list[i + 1]
+            _, next_chn_vfreq, _ = channels_list[i + 1]
             if vfreq >= chn_vfreq and vfreq <= next_chn_vfreq:
                 lower_chn = channels_list[i]
                 upper_chn = channels_list[i + 1]
@@ -135,9 +135,9 @@ def get_channels_boundaries(vfreq, channels_list=CHANNELS):
 ## @param      volumes_list   The volumes list
 ##
 def set_volumes(volumes_list, channels_list=CHANNELS):
-    for i, (channel, vfreq) in enumerate(channels_list):
+    for i, (channel, vfreq, _) in enumerate(channels_list):
         channel.set_volume(volumes_list[i])
-        print("Set volume for freq " + str(vfreq) + " to " + volumes_list[i])
+        print("Set volume for freq " + str(vfreq) + " to " + str(volumes_list[i]))
 
 
 ##
@@ -150,14 +150,22 @@ def vfreq_changed(vfreq):
     sys.stdout.write("\r")
     for i, volume in enumerate(volumes):
         sys.stdout.write(str(round(volume, 2)) + " - ")
+        set_volumes(volumes)
+
     sys.stdout.flush()
 
 if 'rotaryencoder' in sys.modules:
     rotaryencoder.init(MIN_VFREQ, MAX_VFREQ, step=0.1)
     rotaryencoder.def_chg_callback(vfreq_changed)
 
+
 if 'rotaryencoder' in sys.modules:
+    #pass
+    vfreq_changed(88)
     rotaryencoder.loop()
 
-# chn, _ = CHANNELS[1]
-# chn.play()
+# for chn, _, _ in CHANNELS:
+#     chn.unpause()
+
+while True:
+    time.sleep(10)

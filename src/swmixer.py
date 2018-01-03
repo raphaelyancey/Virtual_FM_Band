@@ -96,7 +96,7 @@ class _SoundSourceStream:
             s = self.fileobj.read()
             if s is None or s == '': break
             self.buf += s[:]
-        z = numpy.fromstring(self.buf[:szb], dtype=numpy.int16)
+        z = numpy.frombuffer(self.buf[:szb], dtype=numpy.int16)
         if len(z) < sz:
             # In this case we ran out of stream data
             # append zeros (don't try to be sample accurate for streams)
@@ -307,7 +307,7 @@ class Sound:
                 r = mf.read()
                 if r is None: break
                 data.append(r[:])
-            self.data = numpy.fromstring(''.join(map(str, data)), dtype=numpy.int16)
+            self.data = numpy.frombuffer(''.join(data), dtype=numpy.int16)
             del(mf)
         if self.data is None:
             assert False
