@@ -4,6 +4,7 @@ import swmixer
 import os.path
 from rotaryencoder import rotaryencoder
 from numpy import interp
+import threading
 
 try:
     swmixer.init(stereo=True, samplerate=32000)
@@ -60,7 +61,7 @@ for path in FILENAMES:
 ## @param      vfreq      The vfreq
 ## @param      chn_vfreq  The channel vfreq
 ##
-## @return     The volume for vfreq.
+## @return     The volume for vfreq between 0 and 1.
 ##
 def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):    
     lower_chn, upper_chn = get_channels_boundaries(vfreq)
@@ -141,7 +142,22 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
 
 
 ##
-## @brief      Callback called when the vfreq changed.
+## @brief      Gets the volumes from the given channels list.
+##
+## @param      channels_list  The channels list
+##
+## @return     The volumes.
+##
+def get_volumes(channels_list=CHANNELS):
+    volumes = []
+    for i, (channel, vfreq, _) in enumerate(channels_list):
+        vol = channel.get_volume()
+        volumes.append(vol)
+    return volumes
+
+
+##
+## @brief      Callback for when the vfreq changes.
 ##
 ## @param      vfreq  The vfreq
 ##
@@ -154,15 +170,33 @@ def vfreq_changed(vfreq):
 
     sys.stdout.flush()
 
-if 'rotaryencoder' in sys.modules:
-    rotaryencoder.init(MIN_VFREQ, MAX_VFREQ, step=0.1)
-    rotaryencoder.def_chg_callback(vfreq_changed)
+##
+## @brief      Callback for when the global volume changes.
+##
+## @param      volume  The volume
+##
+def global_volume_changed(volume):
+    volumes = get_volumes()
+    for i, volume in enumerate(volumes):
+        # TODO: change all volumes
+        # (implement global volume var)
+        set_volumes(volumes)
 
 
 if 'rotaryencoder' in sys.modules:
-    #pass
+
     vfreq_changed(88)
-    rotaryencoder.loop()
+
+    tuning_encoder = rotaryencoder.Encoder(17, 18)
+    tuning_encoder.setup(MIN_VFREQ, MAX_VFREQ, step=0.1, def_chg_callback=vfreq_changed)
+    tuning_thread = threading.Thread(target=tuning_encoder.watch)
+
+    volume_encoder = rotaryencoder.Encoder(21, 22) # TODO pins
+    volume_encoder.setup(0, 1, step=0.1, def_chg_callback=global_volume_changed) # TODO
+    global_volume_thread = threading.Thread(target=volume_encoder.watch)
+
+    tuning_thread.start()
+    global_volume_thread.start()
 
 # for chn, _, _ in CHANNELS:
 #     chn.unpause()
