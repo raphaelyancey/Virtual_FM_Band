@@ -8,6 +8,7 @@ class Encoder:
 
     clk = None
     dt = None
+    sw = None
 
     counter = 0
     step = 1
@@ -15,9 +16,10 @@ class Encoder:
     min_counter = 0
     clkLastState = None
 
-    inc_callback = None
-    dec_callback = None
-    chg_callback = None
+    inc_callback = None # Clockwise rotation (increment)
+    dec_callback = None # Anti-clockwise rotation (decrement)
+    chg_callback = None # Rotation (either way)
+    sw_callback = None # Switch pressed
 
     def __init__(self, clkPin, dtPin):
         self.clk = clkPin
@@ -43,6 +45,8 @@ class Encoder:
             self.dec_callback = params['dec_callback']
         if 'chg_callback' in params:
             self.chg_callback = params['chg_callback']
+        if 'sw_callback' in params:
+            self.sw_callback = params['sw_callback']
 
     # def def_inc_callback(self, callback):
     #     self.inc_callback = callback
@@ -56,6 +60,12 @@ class Encoder:
     def watch(self):
         while True:
             try:
+                # Switch part
+                if self.sw_callback:
+                    if GPIO.input(self.sw) == GPIO.HIGH:
+                        # LOW or HIGH? Test irl
+                        self.sw_callback()
+                # Encoder part
                 clkState = GPIO.input(self.clk)
                 dtState = GPIO.input(self.dt)
                 if clkState != self.clkLastState:
