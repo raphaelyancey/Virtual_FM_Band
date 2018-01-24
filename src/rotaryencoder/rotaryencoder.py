@@ -1,6 +1,8 @@
 from RPi import GPIO
 from time import sleep
+import logging
 
+logger = logging.getLogger('virtual_fm_band.rotaryencoder')
 
 class Encoder:
 
@@ -11,18 +13,19 @@ class Encoder:
     step = 1
     max_counter = 100
     min_counter = 0
-    clkLastState = GPIO.input(clk)
+    clkLastState = None
 
     inc_callback = None
     dec_callback = None
     chg_callback = None
 
-    def __init__(self, clkPin=None, dtPin=None):
+    def __init__(self, clkPin, dtPin):
         self.clk = clkPin
         self.dt = dtPin
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.clk, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.dt, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        self.clkLastState = GPIO.input(self.clk)
 
     def setup(self, min_c, max_c, **params):
 
@@ -32,13 +35,13 @@ class Encoder:
         self.counter = self.min_counter + 0
         self.max_counter = max_c
 
-        if params['step']:
+        if 'step' in params:
             self.step = params['step']
-        if params['inc_callback']:
+        if 'inc_callback' in params:
             self.inc_callback = params['inc_callback']
-        if params['dec_callback']:
+        if 'dec_callback' in params:
             self.dec_callback = params['dec_callback']
-        if params['chg_callback']:
+        if 'chg_callback' in params:
             self.chg_callback = params['chg_callback']
 
     # def def_inc_callback(self, callback):
@@ -51,8 +54,8 @@ class Encoder:
     #     self.chg_callback = callback
 
     def watch(self):
-        try:
-            while True:
+        while True:
+            try:
                 clkState = GPIO.input(self.clk)
                 dtState = GPIO.input(self.dt)
                 if clkState != self.clkLastState:
@@ -72,5 +75,8 @@ class Encoder:
                             self.chg_callback(self.counter)
                 self.clkLastState = clkState
                 sleep(0.001)
-        finally:
+            except:
+                logger.info("Exiting...")
                 GPIO.cleanup()
+                break
+        return

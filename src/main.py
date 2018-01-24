@@ -2,6 +2,12 @@ import sys
 import time
 import swmixer
 import os.path
+
+import logging
+logging.basicConfig()
+logger = logging.getLogger('virtual_fm_band')
+logger.setLevel(logging.INFO)
+
 from rotaryencoder import rotaryencoder
 from numpy import interp
 import threading
@@ -138,7 +144,7 @@ def get_channels_boundaries(vfreq, channels_list=CHANNELS):
 def set_volumes(volumes_list, channels_list=CHANNELS):
     for i, (channel, vfreq, _) in enumerate(channels_list):
         channel.set_volume(volumes_list[i])
-        print("Set volume for freq " + str(vfreq) + " to " + str(volumes_list[i]))
+        #logger.info("vfreq: " + str(vfreq) + " - vol: " + str(volumes_list[i]))
 
 
 ##
@@ -162,10 +168,9 @@ def get_volumes(channels_list=CHANNELS):
 ## @param      vfreq  The vfreq
 ##
 def vfreq_changed(vfreq):
+    logger.info("Vfreq changed")
     volumes = get_volumes_for_vfreq(vfreq)
-    sys.stdout.write("\r")
     for i, volume in enumerate(volumes):
-        sys.stdout.write(str(round(volume, 2)) + " - ")
         set_volumes(volumes)
 
     sys.stdout.flush()
@@ -176,6 +181,7 @@ def vfreq_changed(vfreq):
 ## @param      volume  The volume
 ##
 def global_volume_changed(volume):
+    logger.info("Volume changed")
     volumes = get_volumes()
     for i, volume in enumerate(volumes):
         # TODO: change all volumes
@@ -188,11 +194,11 @@ if 'rotaryencoder' in sys.modules:
     vfreq_changed(88)
 
     tuning_encoder = rotaryencoder.Encoder(17, 18)
-    tuning_encoder.setup(MIN_VFREQ, MAX_VFREQ, step=0.1, def_chg_callback=vfreq_changed)
+    tuning_encoder.setup(MIN_VFREQ, MAX_VFREQ, step=0.1, chg_callback=vfreq_changed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
-    volume_encoder = rotaryencoder.Encoder(21, 22) # TODO pins
-    volume_encoder.setup(0, 1, step=0.1, def_chg_callback=global_volume_changed) # TODO
+    volume_encoder = rotaryencoder.Encoder(22, 23)
+    volume_encoder.setup(0, 1, step=0.1, chg_callback=global_volume_changed) # TODO
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 
     tuning_thread.start()
@@ -202,4 +208,9 @@ if 'rotaryencoder' in sys.modules:
 #     chn.unpause()
 
 while True:
-    time.sleep(10)
+    try:
+        time.sleep(10)
+    except:
+        break
+        
+logger.info("Exiting main thread...")
