@@ -21,12 +21,15 @@ class Encoder:
     chg_callback = None # Rotation (either way)
     sw_callback = None # Switch pressed
 
-    def __init__(self, clkPin, dtPin):
+    def __init__(self, clkPin, dtPin, swPin):
         self.clk = clkPin
         self.dt = dtPin
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.clk, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.dt, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        if swPin is not None:
+            self.sw = swPin
+            GPIO.setup(self.sw, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Pulled-up because KY-040 switch is shorted to ground when pressed
         self.clkLastState = GPIO.input(self.clk)
 
     def setup(self, min_c, max_c, **params):
@@ -58,13 +61,19 @@ class Encoder:
     #     self.chg_callback = callback
 
     def watch(self):
+
+        swTriggered = False  # Used to debounce a long switch click (prevent multiple callback calls)
+
         while True:
             try:
                 # Switch part
                 if self.sw_callback:
-                    if GPIO.input(self.sw) == GPIO.HIGH:
-                        # LOW or HIGH? Test irl
-                        self.sw_callback()
+                    if GPIO.input(self.sw) == GPIO.LOW:
+                        if not swTriggered:
+                            self.sw_callback()
+                        swTriggered = True
+                    else:
+                        swTriggered = False
                 # Encoder part
                 clkState = GPIO.input(self.clk)
                 dtState = GPIO.input(self.dt)
@@ -85,8 +94,9 @@ class Encoder:
                             self.chg_callback(self.counter)
                 self.clkLastState = clkState
                 sleep(0.001)
-            except:
+            except BaseException as e:
                 logger.info("Exiting...")
+                logger.info(e)
                 GPIO.cleanup()
                 break
         return

@@ -188,17 +188,20 @@ def global_volume_changed(volume):
         # (implement global volume var)
         set_volumes(volumes)
 
+def button_pressed():
+    logger.info("Button pressed")
+
 
 if 'rotaryencoder' in sys.modules:
 
     vfreq_changed(88)
 
-    tuning_encoder = rotaryencoder.Encoder(17, 18)
-    tuning_encoder.setup(MIN_VFREQ, MAX_VFREQ, step=0.1, chg_callback=vfreq_changed)
+    tuning_encoder = rotaryencoder.Encoder(17, 18, 26)
+    tuning_encoder.setup(MIN_VFREQ, MAX_VFREQ, step=0.1, chg_callback=vfreq_changed, sw_callback=button_pressed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
-    volume_encoder = rotaryencoder.Encoder(22, 23)
-    volume_encoder.setup(0, 1, step=0.1, chg_callback=global_volume_changed) # TODO
+    volume_encoder = rotaryencoder.Encoder(22, 23, 20)
+    volume_encoder.setup(0, 1, step=0.1, chg_callback=global_volume_changed, sw_callback=button_pressed)  # TODO
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 
     tuning_thread.start()
@@ -212,5 +215,5 @@ while True:
         time.sleep(10)
     except:
         break
-        
+
 logger.info("Exiting main thread...")
