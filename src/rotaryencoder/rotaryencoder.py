@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger('virtual_fm_band.rotaryencoder')
 
+
 class Encoder:
 
     clk = None
@@ -14,6 +15,7 @@ class Encoder:
     step = 1
     max_counter = 100
     min_counter = 0
+    counter_loop = False # When at MAX, loop to MIN (-> 0... 100, 0 ... ->)
     clkLastState = None
 
     inc_callback = None # Clockwise rotation (increment)
@@ -32,13 +34,18 @@ class Encoder:
             GPIO.setup(self.sw, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Pulled-up because KY-040 switch is shorted to ground when pressed
         self.clkLastState = GPIO.input(self.clk)
 
-    def setup(self, min_c, max_c, **params):
+    def setup(self, **params):
 
         # Note: boundaries are inclusive : [min_c, max_c]
 
-        self.min_counter = min_c
-        self.counter = self.min_counter + 0
-        self.max_counter = max_c
+        if 'scale_min' in params and 'scale_max' in params:
+            self.mode = 'scale'
+            self.min_counter = params['scale_min']
+            self.counter = self.min_counter + 0
+            self.max_counter = params['scale_max']
+        else:
+            self.mode = 'infinite'
+
 
         if 'step' in params:
             self.step = params['step']
@@ -77,21 +84,37 @@ class Encoder:
                 # Encoder part
                 clkState = GPIO.input(self.clk)
                 dtState = GPIO.input(self.dt)
+
                 if clkState != self.clkLastState:
+
                     if dtState != clkState:
+
                         if self.counter + self.step <= self.max_counter:
+                            # Loop or not, increment if the max isn't reached
                             self.counter += self.step
+                        elif (self.counter + self.step >= self.max_counter) and self.counter_loop is True:
+                            # If loop, go back to min once max is reached
+                            self.counter = self.min_counter
+
                         if self.inc_callback is not None:
                             self.inc_callback(self.counter)
                         if self.chg_callback is not None:
                             self.chg_callback(self.counter)
+
                     else:
+
                         if self.counter - self.step >= self.min_counter:
+                            # Same as for max ^
                             self.counter -= self.step
+                        elif (self.counter - self.step <= self.min_counter) and self.counter_loop is True:
+                            # If loop, go back to max once min is reached
+                            self.counter = self.max_counter
+
                         if self.dec_callback is not None:
                             self.dec_callback(self.counter)
                         if self.chg_callback is not None:
                             self.chg_callback(self.counter)
+
                 self.clkLastState = clkState
                 sleep(0.001)
             except BaseException as e:

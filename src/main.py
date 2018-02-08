@@ -197,11 +197,11 @@ if 'rotaryencoder' in sys.modules:
     vfreq_changed(88)
 
     tuning_encoder = rotaryencoder.Encoder(17, 18, 26)
-    tuning_encoder.setup(MIN_VFREQ, MAX_VFREQ, step=0.1, chg_callback=vfreq_changed, sw_callback=button_pressed)
+    tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=0.1, chg_callback=vfreq_changed, sw_callback=button_pressed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
     volume_encoder = rotaryencoder.Encoder(22, 23, 20)
-    volume_encoder.setup(0, 1, step=0.1, chg_callback=global_volume_changed, sw_callback=button_pressed)  # TODO
+    volume_encoder.setup(scale_min=0, scale_max=1, step=0.1, chg_callback=global_volume_changed, sw_callback=button_pressed)  # TODO
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 
     tuning_thread.start()
