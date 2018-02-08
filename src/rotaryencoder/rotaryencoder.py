@@ -11,17 +11,20 @@ class Encoder:
     dt = None
     sw = None
 
-    counter = 0
-    step = 1
-    max_counter = 100
-    min_counter = 0
-    counter_loop = False # When at MAX, loop to MIN (-> 0... 100, 0 ... ->)
+    polling_interval = 1  # Polling interval (in ms)
+
+    step = 1  # Scale step from min to max
+    max_counter = 100  # Scale max
+    min_counter = 0  # Scale min
+    counter = 0  # Initial scale position
+    counter_loop = False  # When at MAX, loop to MIN (-> 0... 100, 0 ... ->)
+
     clkLastState = None
 
-    inc_callback = None # Clockwise rotation (increment)
-    dec_callback = None # Anti-clockwise rotation (decrement)
-    chg_callback = None # Rotation (either way)
-    sw_callback = None # Switch pressed
+    inc_callback = None  # Clockwise rotation (increment)
+    dec_callback = None  # Anti-clockwise rotation (decrement)
+    chg_callback = None  # Rotation (either way)
+    sw_callback = None  # Switch pressed
 
     def __init__(self, clkPin, dtPin, swPin):
         self.clk = clkPin
@@ -116,7 +119,7 @@ class Encoder:
                             self.chg_callback(self.counter)
 
                 self.clkLastState = clkState
-                sleep(0.001)
+                sleep(self.polling_interval / 1000)
             except BaseException as e:
                 logger.info("Exiting...")
                 logger.info(e)
