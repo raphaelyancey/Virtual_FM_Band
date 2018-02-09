@@ -36,6 +36,9 @@ FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
 CHANNELS = []
 CHANNEL_STEP = None
 
+GLOBAL_VOLUME_STEP = 0.1
+GLOBAL_MUTE = False
+
 # Initialization
 for path in FILENAMES:
     try:
@@ -176,20 +179,52 @@ def vfreq_changed(vfreq):
     sys.stdout.flush()
 
 ##
-## @brief      Callback for when the global volume changes.
+## @brief      Callback for when the global volume increments.
 ##
-## @param      volume  The volume
-##
-def global_volume_changed(volume):
-    logger.info("Volume changed")
+def inc_global_volume():
+    logger.info("Increment global volume")
     volumes = get_volumes()
+    new_volumes = []
     for i, volume in enumerate(volumes):
-        # TODO: change all volumes
-        # (implement global volume var)
-        set_volumes(volumes)
+        v = volume + GLOBAL_VOLUME_STEP
+        if v > 1:
+            new_volumes.append(1)
+        else:
+            new_volumes.append(v)
+    set_volumes(new_volumes)
+    return new_volumes
 
-def button_pressed():
-    logger.info("Button pressed")
+
+##
+## @brief      Callback for when the global volume decrements.
+##
+def dec_global_volume():
+    logger.info("Decrement global volume")
+    volumes = get_volumes()
+    new_volumes = []
+    for i, volume in enumerate(volumes):
+        v = volume - GLOBAL_VOLUME_STEP
+        if v < 0:
+            new_volumes.append(0)
+        else:
+            new_volumes.append(v)
+    set_volumes(new_volumes)
+    return new_volumes
+
+##
+## @brief      Toggles mute state of the global volume
+##
+def toggle_mute():
+    logger.info("Toggle mute")
+    if GLOBAL_MUTE is False:
+        volumes = get_volumes()
+        new_volumes = []
+        for i, volume in enumerate(volumes):
+            new_volumes.append(0)
+        set_volumes(new_volumes)
+    else:
+        volumes = get_volumes()
+        set_volumes(new_volumes)
 
 
 if 'rotaryencoder' in sys.modules:
@@ -197,11 +232,11 @@ if 'rotaryencoder' in sys.modules:
     vfreq_changed(88)
 
     tuning_encoder = rotaryencoder.Encoder(17, 18, 26)
-    tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=0.1, chg_callback=vfreq_changed, sw_callback=button_pressed)
+    tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=0.1, chg_callback=vfreq_changed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
     volume_encoder = rotaryencoder.Encoder(22, 23, 20)
-    volume_encoder.setup(scale_min=0, scale_max=1, step=0.1, chg_callback=global_volume_changed, sw_callback=button_pressed)  # TODO
+    volume_encoder.setup(scale_min=0, scale_max=1, step=0.1, inc_callback=inc_global_volume, dec_callback=dec_global_volume, sw_callback=toggle_mute)
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 
     tuning_thread.start()
