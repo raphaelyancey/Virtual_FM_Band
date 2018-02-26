@@ -17,7 +17,7 @@ class Encoder:
     max_counter = 100  # Scale max
     min_counter = 0  # Scale min
     counter = 0  # Initial scale position
-    counter_loop = False  # When at MAX, loop to MIN (-> 0... 100, 0 ... ->)
+    counter_loop = False  # If True, when at MAX, loop to MIN (-> 0, ..., MAX, MIN, ..., ->)
 
     clkLastState = None
 
@@ -41,14 +41,14 @@ class Encoder:
 
         # Note: boundaries are inclusive : [min_c, max_c]
 
-        if 'scale_min' in params and 'scale_max' in params:
-            self.mode = 'scale'
-            self.min_counter = params['scale_min']
-            self.counter = self.min_counter + 0
-            self.max_counter = params['scale_max']
+        if 'loop' in params and params['loop'] is True:
+            self.counter_loop = True
         else:
-            self.mode = 'infinite'
+            self.counter_loop = False
 
+        self.min_counter = params['scale_min']
+        self.counter = self.min_counter + 0
+        self.max_counter = params['scale_max']
 
         if 'step' in params:
             self.step = params['step']
