@@ -11,6 +11,7 @@ logger.setLevel(logging.INFO)
 from rotaryencoder import rotaryencoder
 from numpy import interp
 import threading
+from subprocess import Popen
 
 try:
     swmixer.init(stereo=True, samplerate=32000)
@@ -26,11 +27,9 @@ MAX_VFREQ=108
 
 # TODO: scan the audio directory intead of hardcoding the filenames
 FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
-    "1.mp3",
-    "2.mp3",
-    "3.mp3"
-    # "4.mp3",
-    # "5.mp3"
+    "K_Jah_mono_32.mp3",
+    "Bounce_FM_mono_32.mp3",
+    "K_Rose_mono_32.mp3"
 ])
 
 CHANNELS = []
@@ -173,6 +172,7 @@ def get_volumes(channels_list=CHANNELS):
 def vfreq_changed(vfreq):
     logger.info("Vfreq changed")
     volumes = get_volumes_for_vfreq(vfreq)
+    logger.info(volumes)
     for i, volume in enumerate(volumes):
         set_volumes(volumes)
 
@@ -181,35 +181,17 @@ def vfreq_changed(vfreq):
 ##
 ## @brief      Callback for when the global volume increments.
 ##
-def inc_global_volume():
+def inc_global_volume(count):
     logger.info("Increment global volume")
-    volumes = get_volumes()
-    new_volumes = []
-    for i, volume in enumerate(volumes):
-        v = volume + GLOBAL_VOLUME_STEP
-        if v > 1:
-            new_volumes.append(1)
-        else:
-            new_volumes.append(v)
-    set_volumes(new_volumes)
-    return new_volumes
+    Popen(["pactl", "set-sink-volume", "0", "+1%"])
 
 
 ##
 ## @brief      Callback for when the global volume decrements.
 ##
-def dec_global_volume():
+def dec_global_volume(count):
     logger.info("Decrement global volume")
-    volumes = get_volumes()
-    new_volumes = []
-    for i, volume in enumerate(volumes):
-        v = volume - GLOBAL_VOLUME_STEP
-        if v < 0:
-            new_volumes.append(0)
-        else:
-            new_volumes.append(v)
-    set_volumes(new_volumes)
-    return new_volumes
+    Popen(["pactl", "set-sink-volume", "0", "-1%"])
 
 ##
 ## @brief      Toggles mute state of the global volume
@@ -217,14 +199,9 @@ def dec_global_volume():
 def toggle_mute():
     logger.info("Toggle mute")
     if GLOBAL_MUTE is False:
-        volumes = get_volumes()
-        new_volumes = []
-        for i, volume in enumerate(volumes):
-            new_volumes.append(0)
-        set_volumes(new_volumes)
+        Popen(["pactl", "set-sink-mute", "0", "1"])
     else:
-        volumes = get_volumes()
-        set_volumes(new_volumes)
+        Popen(["pactl", "set-sink-mute", "0", "0"])
 
 
 if 'rotaryencoder' in sys.modules:
@@ -236,7 +213,7 @@ if 'rotaryencoder' in sys.modules:
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
     volume_encoder = rotaryencoder.Encoder(22, 23, 20)
-    volume_encoder.setup(scale_min=0, scale_max=1, step=0.1, inc_callback=inc_global_volume, dec_callback=dec_global_volume, sw_callback=toggle_mute)
+    volume_encoder.setup(scale_min=0, scale_max=10, step=1, inc_callback=inc_global_volume, dec_callback=dec_global_volume, sw_callback=toggle_mute)
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 
     tuning_thread.start()
