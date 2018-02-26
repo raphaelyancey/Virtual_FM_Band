@@ -197,11 +197,15 @@ def dec_global_volume(count):
 ## @brief      Toggles mute state of the global volume
 ##
 def toggle_mute():
+    global GLOBAL_MUTE
     logger.info("Toggle mute")
+    import os
     if GLOBAL_MUTE is False:
-        Popen(["pactl", "set-sink-mute", "0", "1"])
+        GLOBAL_MUTE = True
+        os.system("pactl set-sink-mute 0 1")
     else:
-        Popen(["pactl", "set-sink-mute", "0", "0"])
+        GLOBAL_MUTE = False
+        os.system("pactl set-sink-mute 0 0")
 
 
 if 'rotaryencoder' in sys.modules:
