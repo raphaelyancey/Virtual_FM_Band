@@ -178,6 +178,7 @@ def vfreq_changed(vfreq):
 
     sys.stdout.flush()
 
+
 ##
 ## @brief      Callback for when the global volume increments.
 ##
@@ -193,19 +194,14 @@ def dec_global_volume(count):
     logger.info("Decrement global volume")
     Popen(["pactl", "set-sink-volume", "0", "-1%"])
 
+
 ##
 ## @brief      Toggles mute state of the global volume
 ##
 def toggle_mute():
-    global GLOBAL_MUTE
-    logger.info("Toggle mute")
-    import os
-    if GLOBAL_MUTE is False:
-        GLOBAL_MUTE = True
-        os.system("pactl set-sink-mute 0 1")
-    else:
-        GLOBAL_MUTE = False
-        os.system("pactl set-sink-mute 0 0")
+    import subprocess
+    subprocess.call(["pactl", "set-sink-mute", "0", "toggle"])
+    logger.info("Mute toggled")
 
 
 if 'rotaryencoder' in sys.modules:
@@ -229,7 +225,7 @@ if 'rotaryencoder' in sys.modules:
 while True:
     try:
         time.sleep(10)
-    except:
+    except BaseException:
         break
 
 logger.info("Exiting main thread...")
