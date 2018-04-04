@@ -2,66 +2,70 @@ import sys
 import time
 import swmixer
 import os.path
-
 import logging
+from rotaryencoder import rotaryencoder
+from numpy import interp
+import threading
+import subprocess
+from copy import copy, deepcopy
+
 logging.basicConfig()
 logger = logging.getLogger('virtual_fm_band')
 logger.setLevel(logging.INFO)
 
-from rotaryencoder import rotaryencoder
-from numpy import interp
-import threading
-from subprocess import Popen
-
 try:
-    swmixer.init(stereo=True, samplerate=32000)
+    swmixer.init(stereo=True, samplerate=44100, output_device_index=2) # To list device IDs: https://stackoverflow.com/a/39677871/2544016
     swmixer.start()
-    print("Started swmixer")
+    logger.info("Started swmixer")
 except BaseException as e:
-    print("Couldn't start swmixer: " + str(e.message))
+    logger.info("Couldn't start swmixer: " + str(e.message))
 
 
 RESSOURCES_PATH = "../ressources/audio"
-MIN_VFREQ=88
-MAX_VFREQ=108
+MIN_VFREQ = 88
+MAX_VFREQ = 108
+VOLUME_STEP = 1  # In % (increment and decrement)
 
 # TODO: scan the audio directory intead of hardcoding the filenames
-FILENAMES = map(lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path), [
-    "K_Jah_mono_32.mp3",
-    "Bounce_FM_mono_32.mp3",
-    "K_Rose_mono_32.mp3"
-])
+FILES = [
+    ("K_Jah_mono.mp3", "KJAH"),
+    ("Bounce_FM_mono.mp3", "BOUNCEFM"),
+    ("K_Rose_mono.mp3", "KROSE")
+]
+
+PATHS = map(
+    lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path),
+    map(lambda file: file[0], FILES)  # Returns the filename
+)
 
 CHANNELS = []
 CHANNEL_STEP = None
 
-GLOBAL_VOLUME_STEP = 0.1
-GLOBAL_MUTE = False
-
 # Initialization
-for path in FILENAMES:
+logger.info("")
+for path in PATHS:
     try:
         snd = swmixer.StreamingSound(path)
-        print("Loaded " + path)
+        logger.info("Loaded " + path)
     except Exception as e:
         snd = None
-        print("Couldn't load " + path + ": " + str(e.message))
+        logger.error("Couldn't load " + path + ": " + str(e.message))
     if snd is not None:
         freq = None
         if len(CHANNELS) < 1:
             freq = MIN_VFREQ
-        elif len(CHANNELS) == (len(FILENAMES) - 1):
+        elif len(CHANNELS) == (len(PATHS) - 1):
             freq = MAX_VFREQ
         else:
-            CHANNEL_STEP = (MAX_VFREQ - MIN_VFREQ) / (len(FILENAMES) - 1)
-            print("Channel step: {}".format(CHANNEL_STEP))
+            CHANNEL_STEP = (MAX_VFREQ - MIN_VFREQ) / (len(PATHS) - 1)
+            logger.info("Channel step: {}".format(CHANNEL_STEP))
             # Last channel vfreq + step
             freq = CHANNELS[-1][1] + CHANNEL_STEP
         chn = snd.play(volume=1.0)
-        #chn.pause()
 
         CHANNELS.append((chn, freq, snd))
-        print("Assigned to virtual frequency " + str(freq))
+        logger.info("Assigned to virtual frequency " + str(freq))
+        logger.info("")
 
 ##
 ## @brief      Computes the volume of a channel given a vfreq and the channel vfreq
@@ -71,7 +75,7 @@ for path in FILENAMES:
 ##
 ## @return     The volume for vfreq between 0 and 1.
 ##
-def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):    
+def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
     lower_chn, upper_chn = get_channels_boundaries(vfreq)
     lower_chn_vfreq = lower_chn[1]
     upper_chn_vfreq = upper_chn[1]
@@ -150,6 +154,27 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
 
 
 ##
+## @brief      Draws a band visualisation on the logger
+##
+## @param      volumes  The ordered volumes
+## @param      files    The ordered files
+##
+## @return     None
+##
+def draw(volumes, files=FILES):
+    width = 10
+    formatted_stations_names = []
+    formatted_volumes = []
+    for station in files:
+        formatted_stations_names.append(("{:^" + str(width) + "}").format(station[1]))
+    for volume in volumes:
+        volume = round(volume, 1)
+        formatted_volumes.append(("{:^" + str(width) + "}").format(volume))
+    logger.info(formatted_stations_names)
+    logger.info(formatted_volumes)
+
+
+##
 ## @brief      Gets the volumes from the given channels list.
 ##
 ## @param      channels_list  The channels list
@@ -170,13 +195,11 @@ def get_volumes(channels_list=CHANNELS):
 ## @param      vfreq  The vfreq
 ##
 def vfreq_changed(vfreq):
-    logger.info("Vfreq changed")
+    logger.info("Virtual frequency changed to {}".format(vfreq))
     volumes = get_volumes_for_vfreq(vfreq)
-    logger.info(volumes)
+    draw(volumes)
     for i, volume in enumerate(volumes):
         set_volumes(volumes)
-
-    sys.stdout.flush()
 
 
 ##
@@ -184,7 +207,8 @@ def vfreq_changed(vfreq):
 ##
 def inc_global_volume(count):
     logger.info("Increment global volume")
-    Popen(["pactl", "set-sink-volume", "0", "+1%"])
+    # Using Popoen for async (we do not want to perturbate the audio)
+    subprocess.Popen(["pactl", "set-sink-volume", "0", "+" + str(VOLUME_STEP) + "%"])
 
 
 ##
@@ -192,16 +216,16 @@ def inc_global_volume(count):
 ##
 def dec_global_volume(count):
     logger.info("Decrement global volume")
-    Popen(["pactl", "set-sink-volume", "0", "-1%"])
+    subprocess.Popen(["pactl", "set-sink-volume", "0", "-" + str(VOLUME_STEP) + "%"])
 
 
 ##
 ## @brief      Toggles mute state of the global volume
 ##
 def toggle_mute():
-    import subprocess
+    # Using call because we don't need async (the audio will be muted or unmuted)
     subprocess.call(["pactl", "set-sink-mute", "0", "toggle"])
-    logger.info("Mute toggled")
+    logger.info("Toggle mute")
 
 
 if 'rotaryencoder' in sys.modules:
@@ -209,7 +233,7 @@ if 'rotaryencoder' in sys.modules:
     vfreq_changed(88)
 
     tuning_encoder = rotaryencoder.Encoder(17, 18, 26)
-    tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=0.1, chg_callback=vfreq_changed)
+    tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=1, chg_callback=vfreq_changed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
     volume_encoder = rotaryencoder.Encoder(22, 23, 20)
