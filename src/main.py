@@ -8,6 +8,7 @@ from numpy import interp
 import threading
 import subprocess
 from copy import copy, deepcopy
+from RPi import GPIO
 
 logging.basicConfig()
 logger = logging.getLogger()
@@ -25,6 +26,10 @@ RESSOURCES_PATH = "/home/pi/Virtual_FM_Band/ressources/audio"
 MIN_VFREQ = 1
 MAX_VFREQ = 300
 VOLUME_STEP = 1  # In % (increment and decrement)
+TUNED_LED_STATUS = 25  # BCM
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(TUNED_LED_STATUS, GPIO.OUT)
 
 # TODO: scan the audio directory intead of hardcoding the filenames
 
@@ -196,12 +201,20 @@ def get_volumes(channels_list=CHANNELS):
 ##
 ## @param      vfreq  The vfreq
 ##
-def vfreq_changed(vfreq):
+def vfreq_changed(vfreq, channels_list=CHANNELS):
+
     logger.info("Virtual frequency changed to {}".format(vfreq))
     volumes = get_volumes_for_vfreq(vfreq)
     draw(volumes)
     for i, volume in enumerate(volumes):
         set_volumes(volumes)
+
+    # If all volumes < 1.0, no vfreq is tuned. Else, a vfreq is tuned.
+    detuned = reduce(lambda a, v: a and v < 1.0, volumes, True)
+    if not detuned:
+        GPIO.output(TUNED_LED_STATUS, GPIO.HIGH)
+    else:
+        GPIO.output(TUNED_LED_STATUS, GPIO.LOW)
 
 
 ##
