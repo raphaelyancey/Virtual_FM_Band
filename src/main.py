@@ -3,7 +3,7 @@ import time
 import swmixer
 import os.path
 import logging
-from rotaryencoder import rotaryencoder
+from pyky040 import pyky040
 from numpy import interp
 import threading
 import subprocess
@@ -228,15 +228,15 @@ def toggle_mute():
     logger.info("Toggle mute")
 
 
-if 'rotaryencoder' in sys.modules:
+if 'pyky040' in sys.modules:
 
     vfreq_changed(88)
 
-    tuning_encoder = rotaryencoder.Encoder(17, 18, 26)
+    tuning_encoder = pyky040.Encoder(17, 18, 26)
     tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=1, chg_callback=vfreq_changed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
-    volume_encoder = rotaryencoder.Encoder(22, 23, 20)
+    volume_encoder = pyky040.Encoder(22, 23, 20)
     volume_encoder.setup(scale_min=0, scale_max=10, step=1, inc_callback=inc_global_volume, dec_callback=dec_global_volume, sw_callback=toggle_mute)
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 

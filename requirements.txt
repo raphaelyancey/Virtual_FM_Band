@@ -3,6 +3,7 @@ numpy
 pyaudio
 numpy
 swmixer
+pyky040
 
 # If you run it on a Raspberry Pi, uncomment the line below
 # RPi.GPIO
