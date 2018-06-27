@@ -1,7 +1,7 @@
 import sys
 import time
 import swmixer
-import os.path
+import os
 import logging
 from pyky040 import pyky040
 from numpy import interp
@@ -10,31 +10,34 @@ import subprocess
 from copy import copy, deepcopy
 
 logging.basicConfig()
-logger = logging.getLogger('virtual_fm_band')
-logger.setLevel(logging.INFO)
+logger = logging.getLogger()
+logger.setLevel(os.getenv('DEBUG') or logging.INFO)
 
 try:
     swmixer.init(stereo=True, samplerate=44100, output_device_index=2) # To list device IDs: https://stackoverflow.com/a/39677871/2544016
     swmixer.start()
     logger.info("Started swmixer")
 except BaseException as e:
-    logger.info("Couldn't start swmixer: " + str(e.message))
+    logger.error("Couldn't start swmixer: " + str(e.message))
 
 
-RESSOURCES_PATH = "../ressources/audio"
-MIN_VFREQ = 88
-MAX_VFREQ = 108
+RESSOURCES_PATH = "/home/pi/Virtual_FM_Band/ressources/audio"
+MIN_VFREQ = 1
+MAX_VFREQ = 300
 VOLUME_STEP = 1  # In % (increment and decrement)
 
 # TODO: scan the audio directory intead of hardcoding the filenames
-FILES = [
-    ("K_Jah_mono.mp3", "KJAH"),
-    ("Bounce_FM_mono.mp3", "BOUNCEFM"),
-    ("K_Rose_mono.mp3", "KROSE")
-]
+
+FILES = []
+for root, dirs, files in os.walk(os.path.abspath(RESSOURCES_PATH)):
+    for file in files:
+        if file.endswith(".mp3"):
+            logger.debug('Found matching file: {}'.format(file))
+            FILES.append((os.path.join(root, file), 
+                          os.path.basename(file)[:-4])) # Stripping out '.mp3'
 
 PATHS = map(
-    lambda path: os.path.abspath(RESSOURCES_PATH + "/" + path),
+    lambda path: os.path.abspath(path),
     map(lambda file: file[0], FILES)  # Returns the filename
 )
 
@@ -46,7 +49,7 @@ logger.info("")
 for path in PATHS:
     try:
         snd = swmixer.StreamingSound(path)
-        logger.info("Loaded " + path)
+        logger.debug("Loaded " + path)
     except Exception as e:
         snd = None
         logger.error("Couldn't load " + path + ": " + str(e.message))
@@ -58,14 +61,14 @@ for path in PATHS:
             freq = MAX_VFREQ
         else:
             CHANNEL_STEP = (MAX_VFREQ - MIN_VFREQ) / (len(PATHS) - 1)
-            logger.info("Channel step: {}".format(CHANNEL_STEP))
+            logger.debug("Channel step: {}".format(CHANNEL_STEP))
             # Last channel vfreq + step
             freq = CHANNELS[-1][1] + CHANNEL_STEP
         chn = snd.play(volume=1.0)
 
         CHANNELS.append((chn, freq, snd))
-        logger.info("Assigned to virtual frequency " + str(freq))
-        logger.info("")
+        logger.debug("Assigned to virtual frequency " + str(freq))
+        logger.debug("")
 
 ##
 ## @brief      Computes the volume of a channel given a vfreq and the channel vfreq
@@ -150,7 +153,6 @@ def get_channels_boundaries(vfreq, channels_list=CHANNELS):
 def set_volumes(volumes_list, channels_list=CHANNELS):
     for i, (channel, vfreq, _) in enumerate(channels_list):
         channel.set_volume(volumes_list[i])
-        #logger.info("vfreq: " + str(vfreq) + " - vol: " + str(volumes_list[i]))
 
 
 ##
@@ -206,7 +208,7 @@ def vfreq_changed(vfreq):
 ## @brief      Callback for when the global volume increments.
 ##
 def inc_global_volume(count):
-    logger.info("Increment global volume")
+    logger.info("Incrementing global volume")
     # Using Popoen for async (we do not want to perturbate the audio)
     subprocess.Popen(["pactl", "set-sink-volume", "0", "+" + str(VOLUME_STEP) + "%"])
 
@@ -215,7 +217,7 @@ def inc_global_volume(count):
 ## @brief      Callback for when the global volume decrements.
 ##
 def dec_global_volume(count):
-    logger.info("Decrement global volume")
+    logger.info("Decrementing global volume")
     subprocess.Popen(["pactl", "set-sink-volume", "0", "-" + str(VOLUME_STEP) + "%"])
 
 
@@ -225,26 +227,23 @@ def dec_global_volume(count):
 def toggle_mute():
     # Using call because we don't need async (the audio will be muted or unmuted)
     subprocess.call(["pactl", "set-sink-mute", "0", "toggle"])
-    logger.info("Toggle mute")
+    logger.info("Toggling mute")
 
 
 if 'pyky040' in sys.modules:
 
-    vfreq_changed(88)
+    vfreq_changed(MIN_VFREQ)
 
-    tuning_encoder = pyky040.Encoder(17, 18, 26)
+    tuning_encoder = pyky040.Encoder(CLK=17, DT=27, SW=22)
     tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=1, chg_callback=vfreq_changed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
-    volume_encoder = pyky040.Encoder(22, 23, 20)
+    volume_encoder = pyky040.Encoder(CLK=5, DT=6, SW=13)
     volume_encoder.setup(scale_min=0, scale_max=10, step=1, inc_callback=inc_global_volume, dec_callback=dec_global_volume, sw_callback=toggle_mute)
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 
     tuning_thread.start()
     global_volume_thread.start()
-
-# for chn, _, _ in CHANNELS:
-#     chn.unpause()
 
 while True:
     try:
