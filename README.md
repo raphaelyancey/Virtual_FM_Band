@@ -22,3 +22,8 @@ In the project root:
 * `virtualenv --python=python2.7` (or whatever Python 2 binary you've got)
 * `source bin/activate`
 * `pip install -r requirements.txt`
+
+## TODO
+  - [ ] Move all variables in an .env file
+  - [ ] Handle streams as input
+  - [ ] Add static noise between stations
