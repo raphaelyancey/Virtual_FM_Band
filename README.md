@@ -27,3 +27,4 @@ In the project root:
   - [ ] Move all variables in an .env file
   - [ ] Handle streams as input
   - [ ] Add static noise between stations
+  - [ ] Make swmixer play the files in loop
