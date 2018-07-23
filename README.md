@@ -1,3 +1,5 @@
+Check out my real-life [GTA: San Andreas radio set](https://raphaelyancey.fr/projects/grand-theft-auto-san-andreas-radio-set.html) for an example use of this library.
+
 # Virtual_FM_Band
 A virtual FM band playing simultaneous sounds over virtual frequencies.
 
