@@ -30,3 +30,5 @@ In the project root:
   - [ ] Handle streams as input
   - [ ] Add static noise between stations
   - [ ] Make swmixer play the files in loop
+  - [ ] Do not play if the file is not to be heard anyway
+  - [ ] Random start position
