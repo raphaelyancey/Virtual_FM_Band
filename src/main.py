@@ -23,10 +23,8 @@ except BaseException as e:
 
 
 RESSOURCES_PATH = "/home/pi/Virtual_FM_Band/ressources/audio"
-MIN_VFREQ = 1
-MAX_VFREQ = 300
 VOLUME_STEP = 1  # In % (increment and decrement)
-TUNED_LED_STATUS = 25  # BCM
+TUNED_LED_PIN = 25  # BCM
 VOLUME_PIN_CLK = 5
 VOLUME_PIN_DT = 6
 VOLUME_PIN_SW = 13
@@ -34,8 +32,11 @@ TUNING_PIN_CLK = 17
 TUNING_PIN_DT = 27
 TUNING_PIN_SW = 22
 
+MIN_VFREQ = 1
+MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
+
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(TUNED_LED_STATUS, GPIO.OUT)
+GPIO.setup(TUNED_LED_PIN, GPIO.OUT)
 
 # TODO: scan the audio directory intead of hardcoding the filenames
 
@@ -218,9 +219,9 @@ def vfreq_changed(vfreq, channels_list=CHANNELS):
     # If all volumes < 1.0, no vfreq is tuned. Else, a vfreq is tuned.
     detuned = reduce(lambda a, v: a and v < 1.0, volumes, True)
     if not detuned:
-        GPIO.output(TUNED_LED_STATUS, GPIO.HIGH)
+        GPIO.output(TUNED_LED_PIN, GPIO.HIGH)
     else:
-        GPIO.output(TUNED_LED_STATUS, GPIO.LOW)
+        GPIO.output(TUNED_LED_PIN, GPIO.LOW)
 
 
 ##
