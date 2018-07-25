@@ -8,7 +8,12 @@ from numpy import interp
 import threading
 import subprocess
 from copy import copy, deepcopy
-from RPi import GPIO
+
+try:
+    from RPi import GPIO
+    has_gpio = True
+except ImportError:
+    has_gpio = False
 
 logging.basicConfig()
 logger = logging.getLogger()
@@ -35,8 +40,9 @@ TUNING_PIN_SW = 22
 MIN_VFREQ = 1
 MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(TUNED_LED_PIN, GPIO.OUT)
+if has_gpio:
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(TUNED_LED_PIN, GPIO.OUT)
 
 # TODO: scan the audio directory intead of hardcoding the filenames
 
@@ -219,9 +225,9 @@ def vfreq_changed(vfreq, channels_list=CHANNELS):
     # If all volumes < 1.0, no vfreq is tuned. Else, a vfreq is tuned.
     detuned = reduce(lambda a, v: a and v < 1.0, volumes, True)
     if not detuned:
-        GPIO.output(TUNED_LED_PIN, GPIO.HIGH)
+        GPIO.output(TUNED_LED_PIN, GPIO.HIGH) if has_gpio else None
     else:
-        GPIO.output(TUNED_LED_PIN, GPIO.LOW)
+        GPIO.output(TUNED_LED_PIN, GPIO.LOW) if has_gpio else None
 
 
 ##
