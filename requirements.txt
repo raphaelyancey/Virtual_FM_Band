@@ -1,9 +1,8 @@
 pymad
 numpy
 pyaudio
-numpy
-swmixer
-pyky040
+python-dotenv
 
-# If you run it on a Raspberry Pi, uncomment the line below
+# Uncomment the lines below if you run it on a RPi.GPIO-capable device
 # RPi.GPIO
+# pyky040

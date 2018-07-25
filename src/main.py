@@ -3,11 +3,11 @@ import time
 import swmixer
 import os
 import logging
-from pyky040 import pyky040
 from numpy import interp
 import threading
 import subprocess
 from copy import copy, deepcopy
+from dotenv import load_dotenv, find_dotenv
 
 try:
     from RPi import GPIO
@@ -15,9 +15,14 @@ try:
 except ImportError:
     has_gpio = False
 
+if has_gpio:
+    from pyky040 import pyky040
+
+load_dotenv(find_dotenv())
+
 logging.basicConfig()
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG if os.getenv('DEBUG') == 'True' else logging.INFO)
+logger.setLevel(logging.DEBUG if os.getenv('DEBUG', '') == 'True' else logging.INFO)
 
 try:
     swmixer.init(stereo=True, samplerate=44100, output_device_index=2) # To list device IDs: https://stackoverflow.com/a/39677871/2544016
@@ -26,16 +31,16 @@ try:
 except BaseException as e:
     logger.error("Couldn't start swmixer: " + str(e.message))
 
-
-RESSOURCES_PATH = "/home/pi/Virtual_FM_Band/ressources/audio"
-VOLUME_STEP = 1  # In % (increment and decrement)
-TUNED_LED_PIN = 25  # BCM
-VOLUME_PIN_CLK = 5
-VOLUME_PIN_DT = 6
-VOLUME_PIN_SW = 13
-TUNING_PIN_CLK = 17
-TUNING_PIN_DT = 27
-TUNING_PIN_SW = 22
+# See .env for vars documentation
+AUDIO_PATH = os.getenv('AUDIO_PATH', '{}/audio'.format(os.getenv('HOME')))
+VOLUME_STEP = os.getenv('VOLUME_STEP', 1)
+TUNED_LED_PIN = os.getenv('TUNED_LED_PIN', 25)
+VOLUME_PIN_CLK = os.getenv('VOLUME_PIN_CLK', 5)
+VOLUME_PIN_DT = os.getenv('VOLUME_PIN_DT', 6)
+VOLUME_PIN_SW = os.getenv('VOLUME_PIN_SW', 13)
+TUNING_PIN_CLK = os.getenv('TUNING_PIN_CLK', 17)
+TUNING_PIN_DT = os.getenv('TUNING_PIN_DT', 27)
+TUNING_PIN_SW = os.getenv('TUNING_PIN_SW', 22)
 
 MIN_VFREQ = 1
 MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
@@ -47,7 +52,7 @@ if has_gpio:
 # TODO: scan the audio directory intead of hardcoding the filenames
 
 FILES = []
-for root, dirs, files in os.walk(os.path.abspath(RESSOURCES_PATH)):
+for root, dirs, files in os.walk(os.path.abspath(AUDIO_PATH)):
     for file in files:
         if file.endswith(".mp3"):
             logger.debug('Found matching file: {}'.format(file))
@@ -256,7 +261,7 @@ def toggle_mute():
     logger.info("Toggling mute")
 
 
-if 'pyky040' in sys.modules:
+if has_gpio and 'pyky040' in sys.modules:
 
     vfreq_changed(MIN_VFREQ)
 
