@@ -12,7 +12,7 @@ from RPi import GPIO
 
 logging.basicConfig()
 logger = logging.getLogger()
-logger.setLevel(os.getenv('DEBUG') or logging.INFO)
+logger.setLevel(logging.DEBUG if os.getenv('DEBUG') == 'True' else logging.INFO)
 
 try:
     swmixer.init(stereo=True, samplerate=44100, output_device_index=2) # To list device IDs: https://stackoverflow.com/a/39677871/2544016
