@@ -27,6 +27,12 @@ MIN_VFREQ = 1
 MAX_VFREQ = 300
 VOLUME_STEP = 1  # In % (increment and decrement)
 TUNED_LED_STATUS = 25  # BCM
+VOLUME_PIN_CLK = 5
+VOLUME_PIN_DT = 6
+VOLUME_PIN_SW = 13
+TUNING_PIN_CLK = 17
+TUNING_PIN_DT = 27
+TUNING_PIN_SW = 22
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(TUNED_LED_STATUS, GPIO.OUT)
@@ -247,11 +253,11 @@ if 'pyky040' in sys.modules:
 
     vfreq_changed(MIN_VFREQ)
 
-    tuning_encoder = pyky040.Encoder(CLK=17, DT=27, SW=22)
+    tuning_encoder = pyky040.Encoder(CLK=TUNING_PIN_CLK, DT=TUNING_PIN_DT, SW=TUNING_PIN_SW)
     tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=1, chg_callback=vfreq_changed)
     tuning_thread = threading.Thread(target=tuning_encoder.watch)
 
-    volume_encoder = pyky040.Encoder(CLK=5, DT=6, SW=13)
+    volume_encoder = pyky040.Encoder(CLK=VOLUME_PIN_CLK, DT=VOLUME_PIN_DT, SW=VOLUME_PIN_SW)
     volume_encoder.setup(scale_min=0, scale_max=10, step=1, inc_callback=inc_global_volume, dec_callback=dec_global_volume, sw_callback=toggle_mute)
     global_volume_thread = threading.Thread(target=volume_encoder.watch)
 
