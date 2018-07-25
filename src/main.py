@@ -69,7 +69,7 @@ for path in PATHS:
             logger.debug("Channel step: {}".format(CHANNEL_STEP))
             # Last channel vfreq + step
             freq = CHANNELS[-1][1] + CHANNEL_STEP
-        chn = snd.play(volume=1.0)
+        chn = snd.play(volume=1.0, loops=-1)
 
         CHANNELS.append((chn, freq, snd))
         logger.debug("Assigned to virtual frequency " + str(freq))
