@@ -1,19 +1,46 @@
 #!/usr/bin/env bash
 
+set -x
+
+HOME=/home/pi
+
+echo ""
+echo "[•] Upgrading and installing required packages"
+echo ""
+
 sudo apt-get update
 
 sudo apt-get upgrade -y
 
 sudo apt-get install -y --no-install-recommends git python-dev pulseaudio pulseaudio-utils libportaudio0 libportaudio2 libportaudiocpp0 libmad0-dev portaudio19-dev libasound-dev
 
-mkdir ~/audio
+echo ""
+echo "[•] Cloning the virtual radio software"
+echo ""
 
-git clone https://github.com/raphaelyancey/Virtual_FM_Band ~/app
+mkdir ${HOME}/audio
 
-cd ~/app
+git clone https://github.com/raphaelyancey/Virtual_FM_Band ${HOME}/app
+
+cd ${HOME}/app
+
+echo ""
+echo "[•] Installing Python modules (might take a while)"
+echo ""
+
+# Should try https://www.piwheels.hostedpi.com/faq.html
 
 pip -V
 
 pip install --user -r requirements.txt
 
-(sudo crontab -l 2>/dev/null; echo "@reboot /usr/bin/env/bash -c \"python2 /home/pi/app/src/main.py\"") | sudo crontab -
+echo ""
+echo "[•] Installing crontab"
+echo ""
+
+(sudo crontab -l 2>/dev/null; echo "@reboot /usr/bin/env/bash /home/pi/app/run.sh") | sudo crontab -
+
+echo ""
+echo "[•] Finished!"
+echo "[•] To complete the installation, put your audio files in ${HOME}/audio and reboot the Pi."
+echo ""
