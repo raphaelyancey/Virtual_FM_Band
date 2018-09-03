@@ -15,6 +15,12 @@ sudo apt-get upgrade -y
 sudo apt-get install -y --no-install-recommends git python-dev pulseaudio pulseaudio-utils libportaudio0 libportaudio2 libportaudiocpp0 libmad0-dev portaudio19-dev libasound-dev
 
 echo ""
+echo "[•] Installing pip"
+echo ""
+
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py | python
+
+echo ""
 echo "[•] Cloning the virtual radio software"
 echo ""
 
@@ -25,7 +31,7 @@ git clone https://github.com/raphaelyancey/Virtual_FM_Band ${HOME}/app
 cd ${HOME}/app
 
 echo ""
-echo "[•] Installing Python modules (might take a while)"
+echo "[•] Installing Python modules (might take a while — about 10mn)"
 echo ""
 
 # Should try https://www.piwheels.hostedpi.com/faq.html
