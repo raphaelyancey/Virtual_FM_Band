@@ -1,7 +1,6 @@
 pymad
 numpy
 pyaudio
-numpy
 swmixer
 pyky040
 
