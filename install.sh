@@ -44,7 +44,7 @@ echo ""
 echo "[•] Installing crontab"
 echo ""
 
-(sudo crontab -l 2>/dev/null; echo "@reboot /usr/bin/env/bash /home/pi/app/run.sh") | sudo crontab -
+(crontab -l 2>/dev/null; echo "@reboot /usr/bin/env/bash /home/pi/app/run.sh") | crontab -
 
 echo ""
 echo "[•] Finished!"
