@@ -19,7 +19,7 @@ echo ""
 echo "[•] Installing pip"
 echo ""
 
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py | python
+curl https://bootstrap.pypa.io/get-pip.py | sudo python
 
 echo ""
 echo "[•] Cloning the virtual radio software"
