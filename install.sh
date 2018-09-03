@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 set -x
+set -e
 
-HOME=/home/pi
+INSTALL_DIR=/home/pi
 
 echo ""
 echo "[•] Upgrading and installing required packages"
@@ -24,11 +25,13 @@ echo ""
 echo "[•] Cloning the virtual radio software"
 echo ""
 
-mkdir ${HOME}/audio
+mkdir ${INSTALL_DIR}/audio
 
-git clone https://github.com/raphaelyancey/Virtual_FM_Band ${HOME}/app
+git clone https://github.com/raphaelyancey/Virtual_FM_Band ${INSTALL_DIR}/app
 
-cd ${HOME}/app
+cd ${INSTALL_DIR}/app
+
+mv .env-example .env
 
 echo ""
 echo "[•] Installing Python modules (might take a while — about 10mn)"
@@ -44,9 +47,12 @@ echo ""
 echo "[•] Installing crontab"
 echo ""
 
-(crontab -l 2>/dev/null; echo "@reboot /usr/bin/env/bash /home/pi/app/run.sh") | crontab -
+(crontab -l 2>/dev/null; echo "@reboot /usr/bin/env/bash ${INSTALL_DIR}/pi/app/run.sh") | crontab -
 
 echo ""
 echo "[•] Finished!"
-echo "[•] To complete the installation, put your audio files in ${HOME}/audio and reboot the Pi."
+echo "[•] To complete the installation:"
+echo "    - Customize ${INSTALL_DIR}/.env if necessary"
+echo "    - Put your audio files in ${INSTALL_DIR}/audio"
+echo "    - Reboot the Pi"
 echo ""
