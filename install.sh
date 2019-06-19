@@ -25,7 +25,7 @@ echo ""
 echo "[•] Cloning the virtual radio software"
 echo ""
 
-mkdir ${INSTALL_DIR}/audio
+mkdir -p ${INSTALL_DIR}/audio
 
 git clone https://github.com/raphaelyancey/Virtual_FM_Band ${INSTALL_DIR}/app
 
@@ -53,6 +53,6 @@ echo ""
 echo "[•] Finished!"
 echo "[•] To complete the installation:"
 echo "    - Put your audio files in ${INSTALL_DIR}/audio"
-echo "    - Customize the configuration file ${INSTALL_DIR}/.env (optionnal)"
+echo "    - Customize the configuration file ${INSTALL_DIR}/app/.env (optionnal)"
 echo "    - Reboot the Pi and enjoy!"
 echo ""
