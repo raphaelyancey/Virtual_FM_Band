@@ -47,12 +47,12 @@ echo ""
 echo "[•] Installing crontab"
 echo ""
 
-(crontab -l 2>/dev/null; echo "@reboot /usr/bin/env/bash ${INSTALL_DIR}/app/run.sh") | crontab -
+(crontab -l 2>/dev/null; echo "@reboot /usr/bin/env bash ${INSTALL_DIR}/app/run.sh") | crontab -
 
 echo ""
 echo "[•] Finished!"
 echo "[•] To complete the installation:"
-echo "    - Customize ${INSTALL_DIR}/.env if necessary"
 echo "    - Put your audio files in ${INSTALL_DIR}/audio"
-echo "    - Reboot the Pi"
+echo "    - Customize the configuration file ${INSTALL_DIR}/.env (optionnal)"
+echo "    - Reboot the Pi and enjoy!"
 echo ""
