@@ -28,7 +28,7 @@ Read the [install.sh](/install.sh) script for details.
 In a nutshell, it:
 - Installs required packages
 - Clones this repository
-- Install Python dependencies
+- Installs Python dependencies
 
 ## TODO
   - [ ] Handle streams as input
