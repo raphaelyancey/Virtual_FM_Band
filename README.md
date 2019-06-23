@@ -27,9 +27,14 @@ In the project root:
 * `pip install -r requirements.txt`
 
 ## TODO
-  - [ ] Move all variables in an .env file
   - [ ] Handle streams as input
   - [ ] Add static noise between stations
   - [ ] Make swmixer play the files in loop
   - [ ] Do not play if the file is not to be heard anyway
   - [ ] Random start position
+
+## Troubleshooting
+
+### `ERROR:root:Couldn't start swmixer:`
+
+Make sure you specified the correct device index in the `.env` file. To list the device indexes, see https://stackoverflow.com/a/39677871/2544016.
