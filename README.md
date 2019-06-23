@@ -23,7 +23,7 @@ Technically, it's a mixer with multiple tracks that takes care of the volume of 
 curl https://raw.githubusercontent.com/raphaelyancey/Virtual_FM_Band/master/install.sh | bash
 ```
 
-Read the [install.sh](/blob/master/install.sh) script for details.
+Read the [install.sh](/install.sh) script for details.
 
 In a nutshell, it:
 - Installs required packages
