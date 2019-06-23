@@ -25,7 +25,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG if os.getenv('DEBUG', '') == 'True' else logging.INFO)
 
 try:
-    swmixer.init(stereo=True, samplerate=44100, output_device_index=2) # To list device IDs: https://stackoverflow.com/a/39677871/2544016
+    swmixer.init(stereo=True, samplerate=44100, output_device_index=2)  # To list device IDs: https://stackoverflow.com/a/39677871/2544016
     swmixer.start()
     logger.info("Started swmixer")
 except BaseException as e:
@@ -35,12 +35,12 @@ except BaseException as e:
 AUDIO_PATH = os.getenv('AUDIO_PATH', '{}/audio'.format(os.getenv('HOME')))
 VOLUME_STEP = os.getenv('VOLUME_STEP', 1)
 TUNED_LED_PIN = os.getenv('TUNED_LED_PIN', 25)
-VOLUME_PIN_CLK = os.getenv('VOLUME_PIN_CLK', 5)
-VOLUME_PIN_DT = os.getenv('VOLUME_PIN_DT', 6)
-VOLUME_PIN_SW = os.getenv('VOLUME_PIN_SW', 13)
-TUNING_PIN_CLK = os.getenv('TUNING_PIN_CLK', 17)
-TUNING_PIN_DT = os.getenv('TUNING_PIN_DT', 27)
-TUNING_PIN_SW = os.getenv('TUNING_PIN_SW', 22)
+VOLUME_PIN_CLK = int(os.getenv('VOLUME_PIN_CLK', 5))
+VOLUME_PIN_DT = int(os.getenv('VOLUME_PIN_DT', 6))
+VOLUME_PIN_SW = int(os.getenv('VOLUME_PIN_SW', 13))
+TUNING_PIN_CLK = int(os.getenv('TUNING_PIN_CLK', 17))
+TUNING_PIN_DT = int(os.getenv('TUNING_PIN_DT', 27))
+TUNING_PIN_SW = int(os.getenv('TUNING_PIN_SW', 22))
 
 MIN_VFREQ = 1
 MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
