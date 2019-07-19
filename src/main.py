@@ -82,7 +82,7 @@ for path in PATHS:
         logger.debug("Loaded " + path)
     except Exception as e:
         snd = None
-        logger.error("Couldn't load " + path + ": " + str(e.message))
+        logger.error("Couldn't load " + path + ": " + str(e))
     if snd is not None:
         freq = None
         if len(CHANNELS) < 1:
@@ -144,7 +144,6 @@ def get_volumes_for_vfreq(vfreq, channels_list=CHANNELS, MIN_VFREQ=MIN_VFREQ, MA
     return volumes
 
 
-
 ##
 ## @brief      Gets the channels boundaries (the channels around the vfreq) for a given vfreq.
 ##
@@ -194,14 +193,13 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
 ## @return     None
 ##
 def draw(volumes, files=FILES):
-    width = 10
     formatted_stations_names = []
     formatted_volumes = []
     for station in files:
-        formatted_stations_names.append(("{:^" + str(width) + "}").format(station[1]))
-    for volume in volumes:
+        formatted_stations_names.append(station[1])
+    for i, volume in enumerate(volumes):
         volume = round(volume, 1)
-        formatted_volumes.append(("{:^" + str(width) + "}").format(volume))
+        formatted_volumes.append(("{:^" + str(len(files[i][1])) + "}").format(volume))
     logger.info(formatted_stations_names)
     logger.info(formatted_volumes)
 
