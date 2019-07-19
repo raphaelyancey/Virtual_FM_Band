@@ -9,6 +9,7 @@ import threading
 import subprocess
 from copy import copy, deepcopy
 from dotenv import load_dotenv, find_dotenv
+import argparse
 
 try:
     from RPi import GPIO
@@ -27,6 +28,9 @@ logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG if os.getenv('DEBUG', '') == 'True' else logging.INFO)
 
+parser = argparse.ArgumentParser(description='Plays virtual radio stations.')
+parser.add_argument('-d', '--debug', action='store_true', help='Load stations and move through them at a regular pace, ignoring encoders input.')
+args = parser.parse_args()
 
 # See .env for vars documentation
 NOISE_PATH = ic(os.getenv('NOISE_PATH', '{}/audio/noise'.format(os.getenv('HOME'))))
@@ -268,7 +272,7 @@ def toggle_mute():
 
 vfreq_changed(CURRENT_VFREQ)
 
-if has_gpio and 'pyky040' in sys.modules:
+if has_gpio and 'pyky040' in sys.modules and not args.debug:
 
     tuning_encoder = pyky040.Encoder(CLK=TUNING_PIN_CLK, DT=TUNING_PIN_DT, SW=TUNING_PIN_SW)
     tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=1, chg_callback=vfreq_changed)
@@ -282,9 +286,24 @@ if has_gpio and 'pyky040' in sys.modules:
     global_volume_thread.start()
 
 while True:
-    try:
-        time.sleep(10)
-    except BaseException:
-        break
+    if args.debug:
+        time.sleep(1)
+        direction = 'up'
+        if direction == 'up':
+            if CURRENT_VFREQ == MAX_VFREQ:
+                direction = 'down'
+            else:
+                CURRENT_VFREQ += 5
+        elif direction == 'down':
+            if CURRENT_VFREQ == MIN_VFREQ:
+                direction = 'up'
+            else:
+                CURRENT_VFREQ -= 5
+        vfreq_changed(CURRENT_VFREQ)
+    else:
+        try:
+            time.sleep(10)
+        except BaseException:
+            break
 
 logger.info("Exiting main thread...")
