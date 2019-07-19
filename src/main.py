@@ -8,6 +8,8 @@ import threading
 import subprocess
 from copy import copy, deepcopy
 from dotenv import load_dotenv, find_dotenv
+import random
+from scipy.interpolate import interp1d
 
 try:
     from RPi import GPIO
@@ -89,11 +91,26 @@ for path in PATHS:
             logger.debug("Channel step: {}".format(CHANNEL_STEP))
             # Last channel vfreq + step
             freq = CHANNELS[-1][1] + CHANNEL_STEP
-        chn = snd.play(volume=1.0, loops=-1)
+        chn = snd.play(volume=0.0, loops=-1)
 
         CHANNELS.append((chn, freq, snd))
         logger.debug("Assigned to virtual frequency " + str(freq))
         logger.debug("")
+
+# Setup the noise tracks
+NOISE_CHANNELS = []
+for root, dirs, files in os.walk(os.path.abspath(NOISE_PATH)):
+    for file in [f for f in files if f.endswith(".mp3")]:
+        path = os.path.join(root, file)
+        try:
+            snd = swmixer.StreamingSound(path)
+            logger.debug("Loaded noise " + path)
+        except Exception as e:
+            snd = None
+            logger.error("Couldn't load noise " + path + ": " + str(e.message))
+        if snd is not None:
+            chn = snd.play(volume=0.0, loops=-1)
+            NOISE_CHANNELS.append((chn, snd))
 
 ##
 ## @brief      Computes the volume of a channel given a vfreq and the channel vfreq
@@ -101,12 +118,14 @@ for path in PATHS:
 ## @param      vfreq      The vfreq
 ## @param      chn_vfreq  The channel vfreq
 ##
-## @return     The volume for vfreq between 0 and 1.
+## @return     The volume for chn_vfreq between 0 and 1.
 ##
 def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
+
     lower_chn, upper_chn = get_channels_boundaries(vfreq)
     lower_chn_vfreq = lower_chn[1]
     upper_chn_vfreq = upper_chn[1]
+
     if chn_vfreq < lower_chn_vfreq or chn_vfreq > upper_chn_vfreq:
         # The channel vfreq is outside the boundaries = null volume
         return 0
@@ -117,12 +136,24 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
         # When x = 100, y = 0
         # |/|\| (poor ASCII art)
         #   0
-        if lower_chn_vfreq == chn_vfreq: scale = [0, 100]
-        elif upper_chn_vfreq == chn_vfreq: scale = [-100, 0]
-        else: scale = [-100, 100]
+        if lower_chn_vfreq == chn_vfreq:
+            scale = [0, 100]
+        elif upper_chn_vfreq == chn_vfreq:
+            scale = [-100, 0]
+        else:
+            scale = [-100, 100]
+
+        # Translating the vfreq on a scale of [-100, 100] (except when first or last station) for easy calculations
         interpolated_vfreq = interp(vfreq, [lower_chn_vfreq, upper_chn_vfreq], scale)
-        volume = 100 - abs(interpolated_vfreq)
-        return volume/100
+
+        # Creating the volume curve (x = vfreq, y = volume)
+        # https://docs.scipy.org/doc/scipy/reference/tutorial/interpolate.html#d-interpolation-interp1d for infos
+        x = [-100, 20, 0, 20, 100]
+        y = [0, 20, 100, 20, 0]
+        f = interp1d(x, y)
+
+        volume = f(interpolated_vfreq)
+        return volume / 100
 
 ##
 ## @brief      Computes the channel volumes for a given virtual frequency.
@@ -180,6 +211,25 @@ def set_volumes(volumes_list, channels_list=CHANNELS):
         channel.set_volume(volumes_list[i])
 
 
+def set_noise(volumes_list, noise_channels_list=NOISE_CHANNELS):
+
+    if len(noise_channels_list) == 0:
+        return
+
+    def no_noise():
+        for noise_channel, _ in noise_channels_list:
+            noise_channel.set_volume(0)
+
+    # Only triggers when in-between stations, i.e. when none of the volumes is over 0.9 (keeping a padding of 0.1)
+    if len([v for v in volumes_list if v > 0.9]) == 0:
+        no_noise()
+        index = ic(random.randint(0, (len(noise_channels_list) - 1)))  # Select a random noise track
+        volume = ic(round(random.uniform(0.8, 1.0), 1))  # And a random volume
+        noise_channels_list[index][0].set_volume(volume)
+    else:
+        no_noise()
+
+
 ##
 ## @brief      Draws a band visualisation on the logger
 ##
@@ -226,8 +276,8 @@ def vfreq_changed(vfreq, channels_list=CHANNELS):
     logger.info("Virtual frequency changed to {}".format(vfreq))
     volumes = get_volumes_for_vfreq(vfreq)
     draw(volumes)
-    for i, volume in enumerate(volumes):
-        set_volumes(volumes)
+    set_volumes(volumes)
+    set_noise(volumes)
 
     # If all volumes < 1.0, no vfreq is tuned. Else, a vfreq is tuned.
     detuned = reduce(lambda a, v: a and v < 1.0, volumes, True)
