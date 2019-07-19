@@ -43,13 +43,14 @@ AUDIO_DEVICE_INDEX = ic(int(os.getenv('AUDIO_DEVICE_INDEX', 1)))
 
 MIN_VFREQ = 1
 MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
+CURRENT_VFREQ = MIN_VFREQ
 
 try:
     swmixer.init(stereo=True, samplerate=44100, output_device_index=AUDIO_DEVICE_INDEX)  # To list device IDs: https://stackoverflow.com/a/39677871/2544016
     swmixer.start()
     logger.info("Started swmixer")
 except BaseException as e:
-    logger.error("Couldn't start swmixer: " + str(e.message))
+    logger.error("Couldn't start swmixer: " + str(e))
 
 if has_gpio:
     GPIO.setmode(GPIO.BCM)
@@ -267,9 +268,9 @@ def toggle_mute():
     logger.info("Toggling mute")
 
 
-if has_gpio and 'pyky040' in sys.modules:
+vfreq_changed(CURRENT_VFREQ)
 
-    vfreq_changed(MIN_VFREQ)
+if has_gpio and 'pyky040' in sys.modules:
 
     tuning_encoder = pyky040.Encoder(CLK=TUNING_PIN_CLK, DT=TUNING_PIN_DT, SW=TUNING_PIN_SW)
     tuning_encoder.setup(scale_min=MIN_VFREQ, scale_max=MAX_VFREQ, step=1, chg_callback=vfreq_changed)
