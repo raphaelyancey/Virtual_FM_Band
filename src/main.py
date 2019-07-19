@@ -1,3 +1,4 @@
+from icecream import ic
 import sys
 import time
 import swmixer
@@ -18,6 +19,8 @@ except ImportError:
 if has_gpio:
     from pyky040 import pyky040
 
+ic.configureOutput(prefix='> ')
+
 load_dotenv(find_dotenv())
 
 logging.basicConfig()
@@ -26,16 +29,17 @@ logger.setLevel(logging.DEBUG if os.getenv('DEBUG', '') == 'True' else logging.I
 
 
 # See .env for vars documentation
-AUDIO_PATH = os.getenv('AUDIO_PATH', '{}/audio'.format(os.getenv('HOME')))
-VOLUME_STEP = os.getenv('VOLUME_STEP', 1)
-TUNED_LED_PIN = int(os.getenv('TUNED_LED_PIN', 25))
-VOLUME_PIN_CLK = int(os.getenv('VOLUME_PIN_CLK', 5))
-VOLUME_PIN_DT = int(os.getenv('VOLUME_PIN_DT', 6))
-VOLUME_PIN_SW = int(os.getenv('VOLUME_PIN_SW', 13))
-TUNING_PIN_CLK = int(os.getenv('TUNING_PIN_CLK', 17))
-TUNING_PIN_DT = int(os.getenv('TUNING_PIN_DT', 27))
-TUNING_PIN_SW = int(os.getenv('TUNING_PIN_SW', 22))
-AUDIO_DEVICE_INDEX = int(os.getenv('AUDIO_DEVICE_INDEX', 1))
+NOISE_PATH = ic(os.getenv('NOISE_PATH', '{}/audio/noise'.format(os.getenv('HOME'))))
+AUDIO_PATH = ic(os.getenv('AUDIO_PATH', '{}/audio'.format(os.getenv('HOME'))))
+VOLUME_STEP = ic(os.getenv('VOLUME_STEP', 1))
+TUNED_LED_PIN = ic(int(os.getenv('TUNED_LED_PIN', 25)))
+VOLUME_PIN_CLK = ic(int(os.getenv('VOLUME_PIN_CLK', 5)))
+VOLUME_PIN_DT = ic(int(os.getenv('VOLUME_PIN_DT', 6)))
+VOLUME_PIN_SW = ic(int(os.getenv('VOLUME_PIN_SW', 13)))
+TUNING_PIN_CLK = ic(int(os.getenv('TUNING_PIN_CLK', 17)))
+TUNING_PIN_DT = ic(int(os.getenv('TUNING_PIN_DT', 27)))
+TUNING_PIN_SW = ic(int(os.getenv('TUNING_PIN_SW', 22)))
+AUDIO_DEVICE_INDEX = ic(int(os.getenv('AUDIO_DEVICE_INDEX', 1)))
 
 MIN_VFREQ = 1
 MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
