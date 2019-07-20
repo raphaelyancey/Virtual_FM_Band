@@ -241,8 +241,8 @@ def set_noise(volumes_list, noise_channels_list=NOISE_CHANNELS):
     # Only triggers when in-between stations, i.e. when none of the volumes is over 0.9 (keeping a padding of 0.1)
     if len([v for v in volumes_list if v > 0.9]) == 0:
         no_noise()
-        index = ic(random.randint(0, (len(noise_channels_list) - 1)))  # Select a random noise track
-        volume = ic(round(random.uniform(0.8, 1.0), 1))  # And a random volume
+        index = random.randint(0, (len(noise_channels_list) - 1))  # Select a random noise track
+        volume = round(random.uniform(0.8, 1.0), 1) # And a random volume
         noise_channels_list[index][0].set_volume(volume)
     else:
         no_noise()
