@@ -28,6 +28,7 @@ logger.setLevel(logging.DEBUG if os.getenv('DEBUG', '') == 'True' else logging.I
 
 
 # See .env for vars documentation
+NOISE_PATH = os.getenv('NOISE_PATH', '{}/audio/noise'.format(os.getenv('HOME')))
 AUDIO_PATH = os.getenv('AUDIO_PATH', '{}/audio'.format(os.getenv('HOME')))
 VOLUME_STEP = os.getenv('VOLUME_STEP', 1)
 TUNED_LED_PIN = int(os.getenv('TUNED_LED_PIN', 25))
