@@ -77,7 +77,7 @@ if has_gpio:
 
 FILES = []
 for root, dirs, files in os.walk(os.path.abspath(AUDIO_PATH)):
-    for file in [f for f in files if f.endswith(".mp3")]:
+    for file in [f for f in files if f.endswith(".mp3") and root == os.path.abspath(AUDIO_PATH)]:
         logger.debug('Found matching file: {}'.format(file))
         FILES.append((os.path.join(root, file),
                       os.path.basename(file)[:-4]))  # Stripping out '.mp3'
