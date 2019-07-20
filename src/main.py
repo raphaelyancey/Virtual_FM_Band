@@ -46,17 +46,7 @@ TUNING_PIN_CLK = ic(int(os.getenv('TUNING_PIN_CLK', 17)))
 TUNING_PIN_DT = ic(int(os.getenv('TUNING_PIN_DT', 27)))
 TUNING_PIN_SW = ic(int(os.getenv('TUNING_PIN_SW', 22)))
 AUDIO_DEVICE_INDEX = ic(int(os.getenv('AUDIO_DEVICE_INDEX', 1)))
-NOISE_PATH = os.getenv('NOISE_PATH', '{}/audio/noise'.format(os.getenv('HOME')))
-AUDIO_PATH = os.getenv('AUDIO_PATH', '{}/audio'.format(os.getenv('HOME')))
-VOLUME_STEP = os.getenv('VOLUME_STEP', 1)
-TUNED_LED_PIN = int(os.getenv('TUNED_LED_PIN', 25))
-VOLUME_PIN_CLK = int(os.getenv('VOLUME_PIN_CLK', 5))
-VOLUME_PIN_DT = int(os.getenv('VOLUME_PIN_DT', 6))
-VOLUME_PIN_SW = int(os.getenv('VOLUME_PIN_SW', 13))
-TUNING_PIN_CLK = int(os.getenv('TUNING_PIN_CLK', 17))
-TUNING_PIN_DT = int(os.getenv('TUNING_PIN_DT', 27))
-TUNING_PIN_SW = int(os.getenv('TUNING_PIN_SW', 22))
-AUDIO_DEVICE_INDEX = int(os.getenv('AUDIO_DEVICE_INDEX', 1))
+NOISE_TRIGGER_THRESHOLD = ic(float(os.getenv('NOISE_TRIGGER_THRESHOLD', 0.9)))
 
 MIN_VFREQ = 1
 MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
@@ -239,7 +229,7 @@ def set_noise(volumes_list, noise_channels_list=NOISE_CHANNELS):
             noise_channel.set_volume(0)
 
     # Only triggers when in-between stations, i.e. when none of the volumes is over 0.9 (keeping a padding of 0.1)
-    if len([v for v in volumes_list if v > 0.9]) == 0:
+    if len([v for v in volumes_list if v > NOISE_TRIGGER_THRESHOLD]) == 0:
         no_noise()
         index = random.randint(0, (len(noise_channels_list) - 1))  # Select a random noise track
         volume = round(random.uniform(0.8, 1.0), 1) # And a random volume
