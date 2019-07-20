@@ -37,6 +37,21 @@ In a nutshell, it:
   - [ ] Do not play if the file is not to be heard anyway
   - [ ] Random start position
 
+## List audio device IDs
+
+After installing the required Python packages, execute this script in a Python shell.
+
+```python
+import pyaudio
+p = pyaudio.PyAudio()
+info = p.get_host_api_info_by_index(0)
+numdevices = info.get('deviceCount')
+for i in range(0, numdevices):
+        if (p.get_device_info_by_host_api_device_index(0, i).get('maxOutputChannels')) > 0:
+            print "Output Device id ", i, " - ", p.get_device_info_by_host_api_device_index(0, i).get('name')
+```
+(inspired by https://stackoverflow.com/a/39677871/2544016)
+
 ## Troubleshooting
 
 ### `ERROR:root:Couldn't start swmixer:`

@@ -41,7 +41,7 @@ MIN_VFREQ = 1
 MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transition speed from a station to the next?
 
 try:
-    swmixer.init(stereo=True, samplerate=44100, output_device_index=AUDIO_DEVICE_INDEX)  # To list device IDs: https://stackoverflow.com/a/39677871/2544016
+    swmixer.init(stereo=True, samplerate=44100, output_device_index=AUDIO_DEVICE_INDEX)  # To list device IDs, see README
     swmixer.start()
     logger.info("Started swmixer")
 except BaseException as e:
