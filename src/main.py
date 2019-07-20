@@ -167,8 +167,8 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
 
         # Creating the volume curve (x = vfreq, y = volume)
         # https://docs.scipy.org/doc/scipy/reference/tutorial/interpolate.html#d-interpolation-interp1d for infos
-        x = [-100, 20, 0, 20, 100]
-        y = [0, 20, 100, 20, 0]
+        x = [-100, -10, 0, 10, 100]
+        y = [0, 10, 100, 10, 0]
         f = interp1d(x, y)
 
         volume = f(interpolated_vfreq)
