@@ -13,7 +13,7 @@ sudo apt-get update
 
 #sudo apt-get upgrade -y
 
-sudo apt-get install -y --no-install-recommends git python-dev pulseaudio pulseaudio-utils libportaudio0 libportaudio2 libportaudiocpp0 libmad0-dev portaudio19-dev libasound-dev
+sudo apt-get install -y --no-install-recommends git python-dev pulseaudio pulseaudio-utils libportaudio0 libportaudio2 libportaudiocpp0 libmad0-dev portaudio19-dev libasound-dev libblas-dev liblapack-dev libatlas-base-dev gfortran
 
 echo ""
 echo "[•] Installing pip"
