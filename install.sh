@@ -47,7 +47,9 @@ echo ""
 echo "[•] Installing crontab"
 echo ""
 
+set +e
 (crontab -l 2>/dev/null; echo "@reboot /usr/bin/env bash ${INSTALL_DIR}/app/run.sh") | crontab -
+set -e # Disable -e mode for this line only, because crontab -l can return non-zero and hence exits the script
 
 echo ""
 echo "[•] Finished!"
