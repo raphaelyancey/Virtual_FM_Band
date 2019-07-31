@@ -53,7 +53,7 @@ MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transit
 CURRENT_VFREQ = MIN_VFREQ
 
 try:
-    swmixer.init(stereo=True, samplerate=44100, output_device_index=AUDIO_DEVICE_INDEX)  # To list device IDs: https://stackoverflow.com/a/39677871/2544016
+    swmixer.init(stereo=True, samplerate=44100, output_device_index=AUDIO_DEVICE_INDEX)  # To list device IDs, see README
     swmixer.start()
     logger.info("Started swmixer")
 except BaseException as e:
