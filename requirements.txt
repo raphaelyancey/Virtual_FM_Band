@@ -5,5 +5,5 @@ python-dotenv==0.10.3
 swmixer==0.1.4
 pyky040==0.1.3
 RPi.GPIO==0.6.3
+scipy==1.2.2
 icecream
-scipy

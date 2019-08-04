@@ -35,7 +35,7 @@ In a nutshell, it:
   - [ ] Do not play if the file is not to be heard anyway
   - [ ] Random start position
 
-## List audio device IDs
+## List audio device indexes
 
 After installing the required Python packages, execute this script in a Python shell.
 
@@ -54,4 +54,4 @@ for i in range(0, numdevices):
 
 ### `ERROR:root:Couldn't start swmixer:`
 
-Make sure you specified the correct device index in the `.env` file. To list the device indexes, see https://stackoverflow.com/a/39677871/2544016.
+Make sure you specified the correct device index in the `.env` file. To list the device indexes, see above.
