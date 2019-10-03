@@ -1,7 +1,6 @@
 from icecream import ic
 import sys
 import time
-import swmixer
 import os
 import logging
 from numpy import interp
@@ -12,6 +11,11 @@ from dotenv import load_dotenv, find_dotenv
 import argparse
 import random
 from scipy.interpolate import interp1d
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst, GObject
+from functools import reduce
+
 
 try:
     from RPi import GPIO
@@ -45,7 +49,6 @@ VOLUME_PIN_SW = ic(int(os.getenv('VOLUME_PIN_SW', 13)))
 TUNING_PIN_CLK = ic(int(os.getenv('TUNING_PIN_CLK', 17)))
 TUNING_PIN_DT = ic(int(os.getenv('TUNING_PIN_DT', 27)))
 TUNING_PIN_SW = ic(int(os.getenv('TUNING_PIN_SW', 22)))
-AUDIO_DEVICE_INDEX = ic(int(os.getenv('AUDIO_DEVICE_INDEX', 1)))
 NOISE_TRIGGER_THRESHOLD = ic(float(os.getenv('NOISE_TRIGGER_THRESHOLD', 0.9)))
 
 MIN_VFREQ = 1
@@ -53,11 +56,10 @@ MAX_VFREQ = 300  # TODO: create a user-friendly env var to customize the transit
 CURRENT_VFREQ = MIN_VFREQ
 
 try:
-    swmixer.init(stereo=True, samplerate=44100, output_device_index=AUDIO_DEVICE_INDEX)  # To list device IDs, see README
-    swmixer.start()
-    logger.info("Started swmixer")
+    Gst.init(None)
+    logger.info("Started gstreamer")
 except BaseException as e:
-    logger.error("Couldn't start swmixer: " + str(e))
+    logger.error("Couldn't start gstreamer: " + str(e))
 
 if has_gpio:
     GPIO.setmode(GPIO.BCM)
@@ -72,10 +74,10 @@ for root, dirs, files in os.walk(os.path.abspath(AUDIO_PATH)):
         FILES.append((os.path.join(root, file),
                       os.path.basename(file)[:-4]))  # Stripping out '.mp3'
 
-PATHS = map(
+PATHS = list(map(
     lambda path: os.path.abspath(path),
     map(lambda file: file[0], FILES)  # Returns the filename
-)
+))
 
 CHANNELS = []
 CHANNEL_STEP = None
@@ -84,12 +86,14 @@ CHANNEL_STEP = None
 logger.info("")
 for path in PATHS:
     try:
-        snd = swmixer.StreamingSound(path)
+        chn = Gst.ElementFactory.make("playbin", None)
+        chn.set_property('uri', 'file://{}'.format(path))
+        chn.set_state(Gst.State.PLAYING)
         logger.debug("Loaded " + path)
     except Exception as e:
-        snd = None
+        chn = None
         logger.error("Couldn't load " + path + ": " + str(e))
-    if snd is not None:
+    if chn is not None:
         freq = None
         if len(CHANNELS) < 1:
             freq = MIN_VFREQ
@@ -100,9 +104,10 @@ for path in PATHS:
             logger.debug("Channel step: {}".format(CHANNEL_STEP))
             # Last channel vfreq + step
             freq = CHANNELS[-1][1] + CHANNEL_STEP
-        chn = snd.play(volume=0.0, loops=-1)
+        chn.set_state(Gst.State.PLAYING)
+        #chn = snd.play(volume=0.0, loops=-1)
 
-        CHANNELS.append((chn, freq, snd))
+        CHANNELS.append((chn, freq))
         logger.debug("Assigned to virtual frequency " + str(freq))
         logger.debug("")
 
@@ -112,14 +117,16 @@ for root, dirs, files in os.walk(os.path.abspath(NOISE_PATH)):
     for file in [f for f in files if f.endswith(".mp3")]:
         path = os.path.join(root, file)
         try:
-            snd = swmixer.StreamingSound(path)
+            chn = Gst.ElementFactory.make("playbin", None)
+            chn.set_property('uri', 'file://{}'.format(path))
+            chn.set_state(Gst.State.PLAYING)
             logger.debug("Loaded noise " + path)
         except Exception as e:
-            snd = None
+            chn = None
             logger.error("Couldn't load noise " + path + ": " + str(e.message))
-        if snd is not None:
-            chn = snd.play(volume=0.0, loops=-1)
-            NOISE_CHANNELS.append((chn, snd))
+        if chn is not None:
+            chn.set_state(Gst.State.PLAYING)
+            NOISE_CHANNELS.append((chn,))
 
 ##
 ## @brief      Computes the volume of a channel given a vfreq and the channel vfreq
@@ -173,7 +180,7 @@ def get_chn_volume_for_vfreq(vfreq, chn_vfreq=None):
 ##
 def get_volumes_for_vfreq(vfreq, channels_list=CHANNELS, MIN_VFREQ=MIN_VFREQ, MAX_VFREQ=MAX_VFREQ):
     volumes = []
-    for i, (_, chn_vfreq, _) in enumerate(channels_list):
+    for i, (_, chn_vfreq) in enumerate(channels_list):
         vol = get_chn_volume_for_vfreq(vfreq, chn_vfreq=chn_vfreq)
         volumes.append(vol)
     return volumes
@@ -193,9 +200,9 @@ def get_channels_boundaries(vfreq, channels_list=CHANNELS):
     upper_chn = channels_list[-1]
 
     # Then for each channel we update them by comparing their vfreq to the requested vfreq
-    for i, (_, chn_vfreq, _) in enumerate(channels_list):
+    for i, (_, chn_vfreq) in enumerate(channels_list):
         if i < len(channels_list) - 1:
-            _, next_chn_vfreq, _ = channels_list[i + 1]
+            _, next_chn_vfreq = channels_list[i + 1]
             if vfreq >= chn_vfreq and vfreq <= next_chn_vfreq:
                 lower_chn = channels_list[i]
                 upper_chn = channels_list[i + 1]
@@ -215,8 +222,8 @@ def get_channels_boundaries(vfreq, channels_list=CHANNELS):
 ## @param      volumes_list   The volumes list
 ##
 def set_volumes(volumes_list, channels_list=CHANNELS):
-    for i, (channel, vfreq, _) in enumerate(channels_list):
-        channel.set_volume(volumes_list[i])
+    for i, (channel, vfreq) in enumerate(channels_list):
+        channel.set_property('volume', volumes_list[i])
 
 
 def set_noise(volumes_list, noise_channels_list=NOISE_CHANNELS):
@@ -225,15 +232,15 @@ def set_noise(volumes_list, noise_channels_list=NOISE_CHANNELS):
         return
 
     def no_noise():
-        for noise_channel, _ in noise_channels_list:
-            noise_channel.set_volume(0)
+        for noise_channel, in noise_channels_list:
+            noise_channel.set_property('volume', 0)
 
     # Only triggers when in-between stations, i.e. when none of the volumes is over 0.9 (keeping a padding of 0.1)
     if len([v for v in volumes_list if v > NOISE_TRIGGER_THRESHOLD]) == 0:
         no_noise()
         index = random.randint(0, (len(noise_channels_list) - 1))  # Select a random noise track
         volume = round(random.uniform(0.8, 1.0), 1) # And a random volume
-        noise_channels_list[index][0].set_volume(volume)
+        noise_channels_list[index][0].set_property('volume', volume)
     else:
         no_noise()
 
@@ -267,8 +274,8 @@ def draw(volumes, files=FILES):
 ##
 def get_volumes(channels_list=CHANNELS):
     volumes = []
-    for i, (channel, vfreq, _) in enumerate(channels_list):
-        vol = channel.get_volume()
+    for i, (channel, vfreq) in enumerate(channels_list):
+        vol = channel.get_property('volume')
         volumes.append(vol)
     return volumes
 
