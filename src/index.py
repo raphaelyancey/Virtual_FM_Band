@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
 
 from icecream import ic
-import sys
-import time
 import os
-from numpy import interp
-import threading
-import subprocess
 import logging
-from dotenv import load_dotenv, find_dotenv
 import argparse
-import random
-from scipy.interpolate import interp1d
-import gi
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst, GObject
-from functools import reduce
+import time
+import threading
 from radio import Radio
+from gi.repository import GObject, GLib
+
 
 try:
     from RPi import GPIO
@@ -33,16 +25,22 @@ ic.configureOutput(prefix='> ')
 logging.basicConfig()
 logger = logging.getLogger('virtual_fm_band')
 logger.setLevel(logging.DEBUG if os.getenv('DEBUG') == 'True' else logging.INFO)
-logger.debug('debug')
-logger.info('info')
 
-# Load environment variables from the .env file if exists
-load_dotenv(find_dotenv())
-
-# If the machine doesn't have encoders wired in, the auto mode simulate frequency encoder rotation
+# If the machine doesn't have encoders wired in, the auto mode simulate frequency encoder rotation. Used for development and testing.
 parser = argparse.ArgumentParser(description='Plays virtual radio stations.')
 parser.add_argument('-a', '--auto', action='store_true', help='Move through the stations at a regular pace, ignoring encoders input if any. Useful when testing without encoders.')
 args = parser.parse_args()
 
-# Initialize the radio: read settings, load files
-radio = Radio().init()
+# Creates stations
+radio = Radio()
+
+mainloop = GLib.MainLoop()
+
+t = threading.Thread(target=lambda: mainloop.run())
+t.daemon = True
+t.start()
+
+logger.debug("Started")
+
+while True:
+    time.sleep(1)
