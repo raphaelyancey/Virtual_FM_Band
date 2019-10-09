@@ -5,6 +5,8 @@ from dotenv import load_dotenv, find_dotenv
 from typing import Sequence
 from audio_engine import AudioEngine, AudioTrack
 import hashlib
+from scipy.interpolate import interp1d
+from numpy import interp
 
 logger = logging.getLogger("virtual_fm_band")
 
@@ -149,6 +151,100 @@ class Radio:
         for src in self.STATIC_NOISE_SOURCES:
             noise = StaticNoise(source=src, audio_engine=self._AUDIO_ENGINE)
             self.STATIC_NOISES.append(noise)
+
+    def get_stations_volumes_for_vfreq(self, vfreq):
+
+        """
+        Computes and returns the volumes of the stations for a given vfreq
+        """
+
+        volumes = []
+
+        for station in self.STATIONS:
+            station_volume = self.get_station_volume_for_vfreq(station, vfreq)
+            volumes.append((station, station_volume))
+
+        return volumes
+
+    def get_station_volume_for_vfreq(self, station, vfreq):
+
+        """
+        Returns the volume a station should be set at, given a vfreq
+        """
+
+        lower_station, upper_station = self.get_neighbor_stations_for_vfreq(vfreq)
+
+        lower_station_vfreq = lower_station.VFREQ
+        upper_station_vfreq = upper_station.VFREQ
+        station_vfreq = station.VFREQ
+
+        if station_vfreq < lower_station_vfreq or station_vfreq > upper_station_vfreq:
+            # The channel vfreq is outside the boundaries = null volume
+            return 0
+        else:
+            # Inside boundaries, compute with `vol = 100 - abs(x)` with x between -100 and 100
+            # When x = -100, y = 0
+            # When x = 0, y = 100
+            # When x = 100, y = 0
+            # |/|\| (poor ASCII art)
+            #   0
+            if lower_station_vfreq == station_vfreq:
+                scale = [0, 100]
+            elif upper_station_vfreq == station_vfreq:
+                scale = [-100, 0]
+            else:
+                scale = [-100, 100]
+
+            # Translating the vfreq on a scale of [-100, 100] (except when first or last station) for easy calculations
+            interpolated_vfreq = interp(
+                vfreq, [lower_station_vfreq, upper_station_vfreq], scale
+            )
+
+            # Creating the volume curve (x = vfreq, y = volume)
+            # https://docs.scipy.org/doc/scipy/reference/tutorial/interpolate.html#d-interpolation-interp1d for infos
+            x = [-100, -10, 0, 10, 100]
+            y = [0, 10, 100, 10, 0]
+            f = interp1d(x, y)
+
+            volume = f(interpolated_vfreq)
+            return volume / 100
+
+    def get_neighbor_stations_for_vfreq(self, vfreq):
+
+        # By default, the boundaries are [first stations] > vfreq > [last station]
+        lower_station = self.STATIONS[0]
+        upper_station = self.STATIONS[-1]
+
+        # Then for each channel we update them by comparing their vfreq to the requested vfreq
+        for i, station in enumerate(self.STATIONS):
+            if i < len(self.STATIONS) - 1:
+                next_station_vfreq = self.STATIONS[i + 1].VFREQ
+                if vfreq >= station.VFREQ and vfreq <= next_station_vfreq:
+                    lower_station = self.STATIONS[i]
+                    upper_station = self.STATIONS[i + 1]
+                    break
+            else:
+                # If there isn't any more channel, the boundaries are the two last channels
+                lower_station = self.STATIONS[-2]
+                upper_station = self.STATIONS[-1]
+
+        return (lower_station, upper_station)
+
+    def set_stations_volumes(self, stations_volumes):
+        for station, volume in stations_volumes:
+            station.set_volume(volume)
+
+    def set_vfreq(self, vfreq):
+
+        logger.info("Virtual frequency changed to <{}>".format(vfreq))
+
+        stations_volumes = self.get_stations_volumes_for_vfreq(vfreq)
+        ic(stations_volumes)
+        # self.draw(stations_volumes)
+        # self.set_stations_volumes(stations_volumes)
+        # self.compute_static_noise_volume(stations_volumes)
+
+        # TODO: tuned status!
 
 
 class Station:
