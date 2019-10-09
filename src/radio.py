@@ -34,8 +34,11 @@ class Radio:
 
     STATE = {"CURRENT_VFREQ": SETTINGS["MIN_VFREQ"]}
 
-    SOURCES = []
+    STATION_SOURCES = []
+    STATIC_NOISE_SOURCES = []
+
     STATIONS = []
+    STATIC_NOISES = []
 
     ALLOWED_FILE_EXTENSIONS = (".mp3",)
 
@@ -49,7 +52,7 @@ class Radio:
         logger.debug("Settings:")
         ic(self.SETTINGS)
 
-        logger.debug("Looking for station sources...")
+        logger.debug("Looking for station and noise sources...")
         self.discover_files()
         # self.discover_streams()
 
@@ -59,26 +62,35 @@ class Radio:
         logger.debug("Creating stations...")
         self.create_stations()
 
-        self._AUDIO_ENGINE.run()
+        logger.debug("Creating static noise tracks...")
+        self.create_static_noise()
 
-        ic(self.STATIONS)
+        logger.info(
+            "Stations and static noise are ready, signaling the audio engine..."
+        )
+        self._AUDIO_ENGINE.run()
 
     def discover_files(self):
 
-        audio_path_tree = os.walk(os.path.abspath(self.SETTINGS["AUDIO_PATH"]))
+        """
+        Discovers audio files (to create stations and static noise sources)
+        """
 
-        for root, dirs, files in audio_path_tree:
+        audio_path = os.path.abspath(self.SETTINGS["AUDIO_PATH"])
+        static_noise_path = os.path.abspath(self.SETTINGS["NOISE_PATH"])
 
-            # Only keeps MP3 files in the root dir of the audio path
-            # TODO: handle other files
+        for path in [audio_path, static_noise_path]:
+
+            if path == audio_path:
+                target = self.STATION_SOURCES
+            elif path == static_noise_path:
+                target = self.STATIC_NOISE_SOURCES
+
             for file in [
-                f
-                for f in files
-                if f.endswith(self.ALLOWED_FILE_EXTENSIONS)
-                and root == os.path.abspath(self.SETTINGS["AUDIO_PATH"])
+                f for f in os.listdir(path) if f.endswith(self.ALLOWED_FILE_EXTENSIONS)
             ]:
 
-                logger.debug("Found a source file:")
+                logger.debug("Found a source file: {}".format(file))
 
                 # Remove the extension, whatever it is
                 source_name = os.path.basename(file)
@@ -92,23 +104,19 @@ class Radio:
 
                 source = {
                     "type": "file",
-                    "uri": "file://{}".format(os.path.join(root, file)),
+                    "uri": "file://{}".format(os.path.join(path, file)),
                     "name": os.path.basename(file)[:-4],
                 }
 
-                logger.debug(source)
-
-                # Adds it to the sources list
-                self.SOURCES.append(source)
-
-        return [src for src in self.SOURCES if src["type"] == "file"]
+                # Adds it to the sources list, given its type
+                target.append(source)
 
     def discover_streams(self):
         pass
 
     def create_stations(self):
 
-        for src in self.SOURCES:
+        for src in self.STATION_SOURCES:
 
             station_vfreq = None
 
@@ -117,14 +125,14 @@ class Radio:
                 station_vfreq = self.SETTINGS["MIN_VFREQ"]
 
             # If it is the last one...
-            elif len(self.STATIONS) == (len(self.SOURCES) - 1):
+            elif len(self.STATIONS) == (len(self.STATION_SOURCES) - 1):
                 station_vfreq = self.SETTINGS["MAX_VFREQ"]
 
             else:
                 # Computing the number of vfreq units to put between each station, given the number of sources and the min/max vfreqs
                 STATION_STEP = (
                     self.SETTINGS["MAX_VFREQ"] - self.SETTINGS["MIN_VFREQ"]
-                ) / (len(self.SOURCES) - 1)
+                ) / (len(self.STATION_SOURCES) - 1)
 
                 # The station vfreq we want is the last channel vfreq + the step
                 # we computed earlier (rounded to prevent decimal vfreqs!)
@@ -135,6 +143,12 @@ class Radio:
             )
 
             self.STATIONS.append(station)
+
+    def create_static_noise(self):
+
+        for src in self.STATIC_NOISE_SOURCES:
+            noise = StaticNoise(source=src, audio_engine=self._AUDIO_ENGINE)
+            self.STATIC_NOISES.append(noise)
 
 
 class Station:
@@ -173,6 +187,32 @@ class Station:
     def get_volume(self, *args, **kwargs):
         return self.AUDIOTRACK.get_volume(*args, **kwargs)
 
-    def play(self):
-        self.AUDIOTRACK.play()
-        logger.debug("Changed state of <{}> to PLAYING".format(self.NAME))
+
+class StaticNoise:
+
+    ID = None
+    URI = None
+
+    AUDIOTRACK = None
+
+    def __init__(self, source=None, audio_engine=None):
+
+        assert audio_engine is not None
+        assert source is not None
+
+        self.URI = source["uri"]
+        self.ID = hashlib.md5(self.URI.encode("utf-8")).hexdigest()[:8]
+        self.AUDIOTRACK = AudioTrack(
+            id=self.ID, uri=self.URI, audio_engine=audio_engine
+        )
+
+        logger.info("Initialized static noise ({id})".format(id=self.ID))
+
+    def set_volume(self, *args, **kwargs):
+        self.AUDIOTRACK.set_volume(*args, **kwargs)
+        logger.debug(
+            "Changed volume of static noise ({}) to {}".format(self.ID, args[0])
+        )
+
+    def get_volume(self, *args, **kwargs):
+        return self.AUDIOTRACK.get_volume(*args, **kwargs)

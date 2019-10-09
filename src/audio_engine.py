@@ -32,12 +32,13 @@ class AudioEngine:
             self.INITIALIZED = True
             logger.info("Started audio engine: gstreamer")
 
+        # Using a gstreamer launch command rather than objects
+        # because it handles all the linking automagically
         self.LAUNCH_COMMAND = "audiomixer name=mix !  volume volume=1.0 name=master ! audioconvert ! autoaudiosink"
 
-        logger.debug("Initialized pipeline")
+        logger.debug("Initialized gstreamer pipeline")
 
     def run(self):
-        logger.info("Running the gstreamer pipeline...")
         self.PIPELINE = Gst.parse_launch(self.LAUNCH_COMMAND)
         self.PIPELINE.set_state(Gst.State.PLAYING)
 
