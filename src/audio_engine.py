@@ -16,7 +16,8 @@ class AudioEngine:
     """
 
     INITIALIZED = False
-    SINK_INSTANCE = None
+    PIPELINE = None
+    LAUNCH_COMMAND = None
 
     def __init__(self):
         """
@@ -32,8 +33,14 @@ class AudioEngine:
             logger.info("Started audio engine: gstreamer")
 
         # Creates the audio sink that all playbins will be connected to
-        self.SINK_INSTANCE = Gst.ElementFactory.make("autoaudiosink", None)
-        logger.debug("Created audio sink")
+        self.LAUNCH_COMMAND = (
+            "audiomixer name=mix !  volume name=master ! audioconvert ! autoaudiosink"
+        )
+        logger.debug("Initialized pipeline")
+
+    def run(self):
+        self.PIPELINE = Gst.parse_launch(self.LAUNCH_COMMAND)
+        self.PIPELINE.set_state(Gst.State.PLAYING)
 
     def volume(self, volume):
         """
@@ -48,20 +55,23 @@ class AudioTrack:
     An interface to create and controls audio tracks
     """
 
-    PLAYBIN_INSTANCE = None
+    _AUDIO_ENGINE_INSTANCE = None
 
-    def __init__(self, uri=None, audio_engine=None):
+    def __init__(self, id=None, uri=None, audio_engine=None):
         """
         Creates an audio track (playbin) connected to the audio sink
         """
 
         assert uri is not None
         assert audio_engine is not None
+        assert id is not None
 
-        # Creates a playbin (= audio track) and connects it to the gstreamer sink
-        self.PLAYBIN_INSTANCE = Gst.ElementFactory.make("playbin", None)
-        self.PLAYBIN_INSTANCE.set_property("audio-sink", audio_engine.SINK_INSTANCE)
-        self.PLAYBIN_INSTANCE.set_property("uri", uri)
+        self._AUDIO_ENGINE_INSTANCE = audio_engine
+        self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += " "
+        self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += "uridecodebin uri={uri} ! volume name=vol{name} ! mix.".format(
+            uri=uri, name=id
+        )
+
         logger.debug("Created audio track with URI <{}>".format(uri))
 
     def set_volume(self, volume):
@@ -69,13 +79,18 @@ class AudioTrack:
         Controls the volume of the playbin
         """
         assert volume >= 0 and volume <= 1.0
-        self.PLAYBIN_INSTANCE.set_property("volume", volume)
+        if self._AUDIO_ENGINE_INSTANCE.PIPELINE:
+            self._AUDIO_ENGINE_INSTANCE.PIPELINE.get_by_name(self.ID).set_property(
+                "volume", volume
+            )
 
     def get_volume(self):
         """
         Returns the current volume of the playbin
         """
-        self.PLAYBIN_INSTANCE.get_property("volume")
+        if not self._AUDIO_ENGINE_INSTANCE.PIPELINE:
+            return 0
 
-    def play(self):
-        self.PLAYBIN_INSTANCE.set_state(Gst.State.PLAYING)
+        return self._AUDIO_ENGINE_INSTANCE.PIPELINE.get_by_name(self.ID).get_property(
+            "volume"
+        )

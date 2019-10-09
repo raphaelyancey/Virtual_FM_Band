@@ -5,6 +5,7 @@ from dotenv import load_dotenv, find_dotenv
 from typing import Sequence
 from station import Station
 from audio_engine import AudioEngine
+from hashlib import md5
 
 logger = logging.getLogger("virtual_fm_band")
 
@@ -59,6 +60,10 @@ class Radio:
         logger.debug("Creating stations...")
         self.create_stations()
 
+        ic(self.STATIONS)
+
+        self._AUDIO_ENGINE.run()
+
     def discover_files(self):
 
         audio_path_tree = os.walk(os.path.abspath(self.SETTINGS["AUDIO_PATH"]))
@@ -106,6 +111,4 @@ class Radio:
 
         for src in self.SOURCES[:2]:
             station = Station(source=src, audio_engine=self._AUDIO_ENGINE)
-            station.set_volume(1)
-            station.play()
             self.STATIONS.append(station)
