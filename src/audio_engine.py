@@ -32,13 +32,12 @@ class AudioEngine:
             self.INITIALIZED = True
             logger.info("Started audio engine: gstreamer")
 
-        # Creates the audio sink that all playbins will be connected to
-        self.LAUNCH_COMMAND = (
-            "audiomixer name=mix !  volume name=master ! audioconvert ! autoaudiosink"
-        )
+        self.LAUNCH_COMMAND = "audiomixer name=mix !  volume volume=1.0 name=master ! audioconvert ! autoaudiosink"
+
         logger.debug("Initialized pipeline")
 
     def run(self):
+        logger.info("Running the gstreamer pipeline...")
         self.PIPELINE = Gst.parse_launch(self.LAUNCH_COMMAND)
         self.PIPELINE.set_state(Gst.State.PLAYING)
 
@@ -46,7 +45,8 @@ class AudioEngine:
         """
         Controls the master volume
         """
-        pass
+        assert volume >= 0 and volume <= 1.0
+        self.PIPELINE.get_by_name("master").set_property("volume", volume)
 
 
 class AudioTrack:
@@ -55,6 +55,7 @@ class AudioTrack:
     An interface to create and controls audio tracks
     """
 
+    ID = None
     _AUDIO_ENGINE_INSTANCE = None
 
     def __init__(self, id=None, uri=None, audio_engine=None):
@@ -66,10 +67,12 @@ class AudioTrack:
         assert audio_engine is not None
         assert id is not None
 
+        self.ID = id
+
         self._AUDIO_ENGINE_INSTANCE = audio_engine
         self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += " "
-        self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += "uridecodebin uri={uri} ! volume name=vol{name} ! mix.".format(
-            uri=uri, name=id
+        self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += "uridecodebin uri={uri} ! volume volume=1.0 name={name} ! mix.".format(
+            uri=uri, name=self.ID
         )
 
         logger.debug("Created audio track with URI <{}>".format(uri))
@@ -90,7 +93,6 @@ class AudioTrack:
         """
         if not self._AUDIO_ENGINE_INSTANCE.PIPELINE:
             return 0
-
         return self._AUDIO_ENGINE_INSTANCE.PIPELINE.get_by_name(self.ID).get_property(
             "volume"
         )

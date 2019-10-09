@@ -3,9 +3,8 @@ from icecream import ic
 import os
 from dotenv import load_dotenv, find_dotenv
 from typing import Sequence
-from station import Station
-from audio_engine import AudioEngine
-from hashlib import md5
+from audio_engine import AudioEngine, AudioTrack
+import hashlib
 
 logger = logging.getLogger("virtual_fm_band")
 
@@ -60,9 +59,9 @@ class Radio:
         logger.debug("Creating stations...")
         self.create_stations()
 
-        ic(self.STATIONS)
-
         self._AUDIO_ENGINE.run()
+
+        ic(self.STATIONS)
 
     def discover_files(self):
 
@@ -109,6 +108,71 @@ class Radio:
 
     def create_stations(self):
 
-        for src in self.SOURCES[:2]:
-            station = Station(source=src, audio_engine=self._AUDIO_ENGINE)
+        for src in self.SOURCES:
+
+            station_vfreq = None
+
+            # If it is the first station to be created...
+            if len(self.STATIONS) == 0:
+                station_vfreq = self.SETTINGS["MIN_VFREQ"]
+
+            # If it is the last one...
+            elif len(self.STATIONS) == (len(self.SOURCES) - 1):
+                station_vfreq = self.SETTINGS["MAX_VFREQ"]
+
+            else:
+                # Computing the number of vfreq units to put between each station, given the number of sources and the min/max vfreqs
+                STATION_STEP = (
+                    self.SETTINGS["MAX_VFREQ"] - self.SETTINGS["MIN_VFREQ"]
+                ) / (len(self.SOURCES) - 1)
+
+                # The station vfreq we want is the last channel vfreq + the step
+                # we computed earlier (rounded to prevent decimal vfreqs!)
+                station_vfreq = self.STATIONS[-1].VFREQ + round(STATION_STEP)
+
+            station = Station(
+                vfreq=station_vfreq, source=src, audio_engine=self._AUDIO_ENGINE
+            )
+
             self.STATIONS.append(station)
+
+
+class Station:
+
+    ID = None
+    URI = None
+    NAME = None
+
+    VFREQ = None
+    AUDIOTRACK = None
+
+    def __repr__(self):
+        return "<{}> [F:{}] [V:{}]".format(self.NAME, self.VFREQ, self.get_volume())
+
+    def __init__(self, vfreq=None, source=None, audio_engine=None):
+
+        assert audio_engine is not None
+        assert source is not None
+
+        self.VFREQ = vfreq
+        self.URI = source["uri"]
+        self.NAME = source["name"]
+        self.ID = hashlib.md5(self.URI.encode("utf-8")).hexdigest()[:8]
+        self.AUDIOTRACK = AudioTrack(
+            id=self.ID, uri=self.URI, audio_engine=audio_engine
+        )
+
+        logger.info(
+            "Initialized station <{name}> ({id})".format(name=self.NAME, id=self.ID)
+        )
+
+    def set_volume(self, *args, **kwargs):
+        self.AUDIOTRACK.set_volume(*args, **kwargs)
+        logger.debug("Changed volume of <{}> to {}".format(self.NAME, args[0]))
+
+    def get_volume(self, *args, **kwargs):
+        return self.AUDIOTRACK.get_volume(*args, **kwargs)
+
+    def play(self):
+        self.AUDIOTRACK.play()
+        logger.debug("Changed state of <{}> to PLAYING".format(self.NAME))
