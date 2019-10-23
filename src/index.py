@@ -20,19 +20,19 @@ except ImportError:
 if has_gpio:
     from pyky040 import pyky040
 
+# Load env vars (also loaded by Radio later, but not handling the same vars)
+load_dotenv(find_dotenv(), verbose=True)
+
 # `ic` is used for dumping values whereas `logging` is used for standard logging
 ic.configureOutput(prefix='> ')
 logging.basicConfig()
 logger = logging.getLogger('virtual_fm_band')
-logger.setLevel(logging.DEBUG if os.getenv('DEBUG') == 'True' else logging.INFO)
+logger.setLevel(logging.DEBUG if ic(os.getenv('DEBUG')) == '1' else logging.INFO)
 
 # If the machine doesn't have encoders wired in, the auto mode simulate frequency encoder rotation. Used for development and testing.
 parser = argparse.ArgumentParser(description='Plays virtual radio stations.')
 parser.add_argument('-a', '--auto', action='store_true', help='Move through the stations at a regular pace, ignoring encoders input if any. Useful when testing without encoders.')
 args = parser.parse_args()
-
-# Load env vars (also loaded by Radio later, but not handling the same vars)
-load_dotenv(find_dotenv(), verbose=True)
 
 SETTINGS = {
     "VOLUME_STEP": os.getenv("VOLUME_STEP", 1),
@@ -61,13 +61,13 @@ def tuned_station():
         GPIO.output(SETTINGS['TUNED_LED_PIN'], GPIO.HIGH)
 
 
-def untuned_station():
+def detuned_station():
     if has_gpio:
         GPIO.output(SETTINGS['TUNED_LED_PIN'], GPIO.LOW)
 
 
 radio = Radio(on_tuned_station=tuned_station,
-              on_detuned_station=untuned_station,
+              on_detuned_station=detuned_station,
               settings=SETTINGS)
 
 ic(radio.STATIONS)

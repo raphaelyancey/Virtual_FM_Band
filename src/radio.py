@@ -7,6 +7,7 @@ import hashlib
 from scipy.interpolate import interp1d
 from numpy import interp
 import random
+from functools import reduce
 
 logger = logging.getLogger("virtual_fm_band")
 
@@ -267,7 +268,14 @@ class Radio:
         self.set_stations_volumes(stations_volumes)
         self.compute_static_noise_volume(stations_volumes)
 
-        # TODO: tuned status!
+        # If all volumes < 1.0, no vfreq is tuned. Else, a vfreq is tuned.
+        detuned = reduce(lambda a, v: a and v < 1.0, [v for s, v in stations_volumes], True)
+        if not detuned:
+            if self.CALLBACKS['on_tuned_station'] is not None:
+                self.CALLBACKS['on_tuned_station']()
+        else:
+            if self.CALLBACKS['on_detuned_station'] is not None:
+                self.CALLBACKS['on_detuned_station']()
 
 
 class Station:
