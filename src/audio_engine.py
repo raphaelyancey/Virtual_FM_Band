@@ -42,7 +42,7 @@ class AudioEngine:
         self.PIPELINE = Gst.parse_launch(self.LAUNCH_COMMAND)
         self.PIPELINE.set_state(Gst.State.PLAYING)
 
-    def volume(self, volume):
+    def set_master_volume(self, volume):
         """
         Controls the master volume
         """
@@ -72,7 +72,7 @@ class AudioTrack:
 
         self._AUDIO_ENGINE_INSTANCE = audio_engine
         self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += " "
-        self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += "uridecodebin uri={uri} ! volume volume=1.0 name={name} ! mix.".format(
+        self._AUDIO_ENGINE_INSTANCE.LAUNCH_COMMAND += "uridecodebin uri={uri} ! volume volume=0 name={name} ! mix.".format(
             uri=uri, name=self.ID
         )
 

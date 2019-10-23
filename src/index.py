@@ -34,13 +34,26 @@ args = parser.parse_args()
 # Creates stations
 radio = Radio()
 
+ic(radio.STATIONS)
+
 mainloop = GLib.MainLoop()
 
 t = threading.Thread(target=lambda: mainloop.run())
 t.daemon = True
 t.start()
 
-logger.debug("Started")
+logger.debug("Started!")
+
+# Tune in the first station
+radio.set_vfreq(1)
+
+if args.auto:
+    auto_vfreq = 0
 
 while True:
+
     time.sleep(1)
+
+    if args.auto:
+        auto_vfreq += 1
+        radio.set_vfreq(auto_vfreq)

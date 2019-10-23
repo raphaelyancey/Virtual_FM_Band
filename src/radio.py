@@ -7,6 +7,7 @@ from audio_engine import AudioEngine, AudioTrack
 import hashlib
 from scipy.interpolate import interp1d
 from numpy import interp
+import random
 
 logger = logging.getLogger("virtual_fm_band")
 
@@ -162,7 +163,7 @@ class Radio:
 
         for station in self.STATIONS:
             station_volume = self.get_station_volume_for_vfreq(station, vfreq)
-            volumes.append((station, station_volume))
+            volumes.append((station, round(station_volume, 1)))
 
         return volumes
 
@@ -174,30 +175,28 @@ class Radio:
 
         lower_station, upper_station = self.get_neighbor_stations_for_vfreq(vfreq)
 
-        lower_station_vfreq = lower_station.VFREQ
-        upper_station_vfreq = upper_station.VFREQ
-        station_vfreq = station.VFREQ
-
-        if station_vfreq < lower_station_vfreq or station_vfreq > upper_station_vfreq:
-            # The channel vfreq is outside the boundaries = null volume
+        if station.VFREQ < lower_station.VFREQ or station.VFREQ > upper_station.VFREQ:
+            # The station vfreq is outside the boundaries = null volume
             return 0
         else:
             # Inside boundaries, compute with `vol = 100 - abs(x)` with x between -100 and 100
-            # When x = -100, y = 0
-            # When x = 0, y = 100
-            # When x = 100, y = 0
+            # When x = -100, vol = 0
+            # When x = 0, vol = 100
+            # When x = 100, vol = 0
             # |/|\| (poor ASCII art)
             #   0
-            if lower_station_vfreq == station_vfreq:
+            #   
+            # NOTE: `station` can only be one of `lower_station` or 
+            #       `upper_station` because we return 0 before if it's not.
+            # 
+            if station == lower_station:
                 scale = [0, 100]
-            elif upper_station_vfreq == station_vfreq:
+            elif station == upper_station:
                 scale = [-100, 0]
-            else:
-                scale = [-100, 100]
 
             # Translating the vfreq on a scale of [-100, 100] (except when first or last station) for easy calculations
             interpolated_vfreq = interp(
-                vfreq, [lower_station_vfreq, upper_station_vfreq], scale
+                vfreq, [lower_station.VFREQ, upper_station.VFREQ], scale
             )
 
             # Creating the volume curve (x = vfreq, y = volume)
@@ -234,6 +233,24 @@ class Radio:
         for station, volume in stations_volumes:
             station.set_volume(volume)
 
+    def compute_static_noise_volume(self, stations_volumes):
+
+        if len(self.STATIC_NOISES) == 0:
+            return
+
+        def no_noise():
+            for noise in self.STATIC_NOISES:
+                noise.set_volume(0)
+
+        # Only triggers when in-between stations, i.e. when none of the volumes is over NOISE_TRIGGER_THRESHOLD
+        if len([v for _, v in stations_volumes if v > self.SETTINGS['NOISE_TRIGGER_THRESHOLD']]) == 0:
+            no_noise()
+            index = random.randint(0, (len(self.STATIC_NOISES) - 1))  # Select a random noise track
+            volume = round(random.uniform(0.5, 0.8), 1) # And a random volume
+            self.STATIC_NOISES[index].set_volume(volume)
+        else:
+            no_noise()
+
     def set_vfreq(self, vfreq):
 
         logger.info("Virtual frequency changed to <{}>".format(vfreq))
@@ -241,8 +258,8 @@ class Radio:
         stations_volumes = self.get_stations_volumes_for_vfreq(vfreq)
         ic(stations_volumes)
         # self.draw(stations_volumes)
-        # self.set_stations_volumes(stations_volumes)
-        # self.compute_static_noise_volume(stations_volumes)
+        self.set_stations_volumes(stations_volumes)
+        self.compute_static_noise_volume(stations_volumes)
 
         # TODO: tuned status!
 
