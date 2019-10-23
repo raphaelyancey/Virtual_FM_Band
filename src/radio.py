@@ -1,7 +1,6 @@
 import logging
 from icecream import ic
 import os
-from dotenv import load_dotenv, find_dotenv
 from typing import Sequence
 from audio_engine import AudioEngine, AudioTrack
 import hashlib
@@ -14,25 +13,17 @@ logger = logging.getLogger("virtual_fm_band")
 
 class Radio:
 
-    # Load environment variables from the .env file if exists
-    load_dotenv(find_dotenv(), verbose=True)
+    """
+    This class handles only the logic : stations, static noise, volumes.
+    All of the "hardware" interface should be outside of it.
+    """
 
     SETTINGS = {
-        "NOISE_PATH": os.getenv(
-            "NOISE_PATH", "{}/audio/noise".format(os.getenv("HOME"))
-        ),
-        "AUDIO_PATH": os.getenv("AUDIO_PATH", "{}/audio".format(os.getenv("HOME"))),
-        "VOLUME_STEP": os.getenv("VOLUME_STEP", 1),
-        "TUNED_LED_PIN": int(os.getenv("TUNED_LED_PIN", 25)),
-        "VOLUME_PIN_CLK": int(os.getenv("VOLUME_PIN_CLK", 5)),
-        "VOLUME_PIN_DT": int(os.getenv("VOLUME_PIN_DT", 6)),
-        "VOLUME_PIN_SW": int(os.getenv("VOLUME_PIN_SW", 13)),
-        "TUNING_PIN_CLK": int(os.getenv("TUNING_PIN_CLK", 17)),
-        "TUNING_PIN_DT": int(os.getenv("TUNING_PIN_DT", 27)),
-        "TUNING_PIN_SW": int(os.getenv("TUNING_PIN_SW", 22)),
-        "NOISE_TRIGGER_THRESHOLD": float(os.getenv("NOISE_TRIGGER_THRESHOLD", 0.9)),
-        "MIN_VFREQ": 1,
-        "MAX_VFREQ": 300,  # TODO: create a user-friendly, computed env var to customize the transition speed from a station to the next?
+        "NOISE_PATH": None,
+        "AUDIO_PATH": None,
+        "NOISE_TRIGGER_THRESHOLD": None,
+        "MIN_VFREQ": None,
+        "MAX_VFREQ": None,  # TODO: create a user-friendly, computed env var to customize the transition speed from a station to the next?
     }
 
     STATE = {"CURRENT_VFREQ": SETTINGS["MIN_VFREQ"]}
@@ -47,12 +38,21 @@ class Radio:
 
     _AUDIO_ENGINE = None
 
-    def __init__(self):
+    # These callbacks can just be passed as kwarg when instantiating the class
+    CALLBACKS = {
+        'on_tuned_station': None,
+        'on_detuned_station': None
+    }
+
+    def __init__(self, settings=None, *args, **kwargs):
         """
         Discovers audio sources and creates stations
         """
 
+        assert settings is not None
+
         logger.debug("Settings:")
+        self.SETTINGS.update(settings)
         ic(self.SETTINGS)
 
         logger.debug("Looking for station and noise sources...")
@@ -72,6 +72,12 @@ class Radio:
             "Stations and static noise are ready, signaling the audio engine..."
         )
         self._AUDIO_ENGINE.run()
+
+        # Handling callbacks
+        for kwarg in kwargs:
+            if kwarg in self.CALLBACKS and callable(kwargs[kwarg]):
+                self.CALLBACKS[kwarg] = kwargs[kwarg]
+
 
     def discover_files(self):
 
