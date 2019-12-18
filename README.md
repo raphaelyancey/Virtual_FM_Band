@@ -1,3 +1,5 @@
+> 🚸 Currently rewriting from scratch using `gstreamer` (on the `dev` branch)
+
 > Check out the real-life [GTA: San Andreas radio set](https://raphaelyancey.fr/projects/grand-theft-auto-san-andreas-radio-set.html) for an example use of this library
 
 # Virtual_FM_Band
