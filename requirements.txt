@@ -1,5 +1,5 @@
 pymad==0.10
-numpy==1.13.3
+numpy==1.22.0
 pyaudio==0.2.11
 python-dotenv==0.10.3
 swmixer==0.1.4
